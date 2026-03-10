@@ -233,46 +233,64 @@ export default function OrderDetailPage() {
         <TabsContent value="dispatch" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Dispatch</CardTitle>
+              <div>
+                <CardTitle className="text-base">Dispatch</CardTitle>
+                {order && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(() => {
+                      const totalDispatched = dispatches.reduce((s, d) => s + (d.windows_dispatched || 0), 0);
+                      const remaining = order.total_windows - totalDispatched;
+                      return `Dispatched: ${totalDispatched} / ${order.total_windows} · Remaining: ${remaining}`;
+                    })()}
+                  </p>
+                )}
+              </div>
               <Button size="sm" onClick={async () => {
                 await supabase.from("dispatch").insert({ order_id: id });
                 fetchAll();
-              }}>Add Dispatch</Button>
+              }}>Add Shipment</Button>
             </CardHeader>
             <CardContent>
               {dispatches.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No dispatches yet.</p>
               ) : (
                 <div className="space-y-3">
-                  {dispatches.map((d) => (
-                    <div key={d.id} className="grid grid-cols-2 gap-3 rounded-md border p-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Windows Dispatched</Label>
-                        <Input type="number" defaultValue={d.windows_dispatched} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ windows_dispatched: Number(e.target.value) }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Dispatch Date</Label>
-                        <Input type="date" defaultValue={d.dispatch_date || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ dispatch_date: e.target.value || null }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Transporter</Label>
-                        <Input defaultValue={d.transporter || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ transporter: e.target.value }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
-                        <Input defaultValue={d.vehicle_details || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ vehicle_details: e.target.value }).eq("id", d.id);
-                          fetchAll();
-                        }} />
+                  {dispatches.map((d, idx) => (
+                    <div key={d.id} className="rounded-md border p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Shipment #{idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Windows Dispatched</Label>
+                          <Input type="number" min={0} defaultValue={d.windows_dispatched} onBlur={async (e) => {
+                            const newVal = Number(e.target.value) || 0;
+                            if (newVal !== d.windows_dispatched) {
+                              await logAuditEntry({ entityType: "dispatch", entityId: d.id, field: "windows_dispatched", oldValue: String(d.windows_dispatched), newValue: String(newVal) });
+                              await supabase.from("dispatch").update({ windows_dispatched: newVal }).eq("id", d.id);
+                              fetchAll();
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Dispatch Date</Label>
+                          <Input type="date" defaultValue={d.dispatch_date || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ dispatch_date: e.target.value || null }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Transporter Name</Label>
+                          <Input defaultValue={d.transporter || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ transporter: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
+                          <Input defaultValue={d.vehicle_details || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ vehicle_details: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -299,6 +317,7 @@ export default function OrderDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Planned Date</Label>
                     <Input type="date" defaultValue={installation.installation_planned || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_planned", oldValue: installation.installation_planned, newValue: e.target.value || null });
                       await supabase.from("installation").update({ installation_planned: e.target.value || null }).eq("id", installation.id);
                       fetchAll();
                     }} />
@@ -306,17 +325,25 @@ export default function OrderDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Completed Date</Label>
                     <Input type="date" defaultValue={installation.installation_completed || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_completed", oldValue: installation.installation_completed, newValue: e.target.value || null });
                       await supabase.from("installation").update({ installation_completed: e.target.value || null }).eq("id", installation.id);
                       fetchAll();
                     }} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Status</Label>
-                    <Input defaultValue={installation.installation_status} onBlur={async (e) => {
-                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: e.target.value });
-                      await supabase.from("installation").update({ installation_status: e.target.value }).eq("id", installation.id);
+                    <Label className="text-xs text-muted-foreground">Installation Status</Label>
+                    <Select value={installation.installation_status} onValueChange={async (val) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: val });
+                      await supabase.from("installation").update({ installation_status: val }).eq("id", installation.id);
                       fetchAll();
-                    }} />
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["Pending", "Planned", "Completed"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
