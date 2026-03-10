@@ -194,8 +194,9 @@ export default function OrdersDashboard() {
               </div>
               <Button type="submit" className="w-full">Create</Button>
             </form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
