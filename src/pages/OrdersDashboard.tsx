@@ -161,7 +161,8 @@ export default function OrdersDashboard() {
           <TableHeader>
             <TableRow>
               <TableHead>Order Name</TableHead>
-              <TableHead>Dealer</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Commercial</TableHead>
               <TableHead>Finance</TableHead>
               <TableHead>Survey</TableHead>
