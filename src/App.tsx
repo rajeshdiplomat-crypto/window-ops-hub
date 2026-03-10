@@ -6,12 +6,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import LoginPage from "@/pages/LoginPage";
+import DashboardPage from "@/pages/DashboardPage";
 import OrdersDashboard from "@/pages/OrdersDashboard";
 import OrderDetailPage from "@/pages/OrderDetailPage";
-import UserManagementPage from "@/pages/UserManagementPage";
-import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
-import RoleQueuePage from "@/pages/RoleQueuePage";
+import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
+import SettingsPage from "@/pages/SettingsPage";
+import AdminSettingsPage from "@/pages/AdminSettingsPage";
+import UserManagementPage from "@/pages/UserManagementPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,12 +26,25 @@ function ProtectedRoutes() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<OrdersDashboard />} />
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/sales" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/survey" element={<DepartmentQueuePage departmentKey="survey" />} />
+        <Route path="/finance" element={<DepartmentQueuePage departmentKey="finance" />} />
+        <Route path="/design" element={<DepartmentQueuePage departmentKey="design" />} />
+        <Route path="/procurement" element={<DepartmentQueuePage departmentKey="procurement" />} />
         <Route path="/production" element={<ProductionDashboard />} />
-        <Route path="/queue/:role" element={<RoleQueuePage />} />
-        <Route path="/admin/users" element={<UserManagementPage />} />
-        <Route path="/admin/settings" element={<AdminSettingsPage />} />
+        <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
+        <Route path="/dispatch" element={<DepartmentQueuePage departmentKey="dispatch" />} />
+        <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
+        <Route path="/settings" element={<SettingsPage />}>
+          <Route index element={<AdminSettingsPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+        </Route>
+        {/* Legacy redirects */}
+        <Route path="/admin/users" element={<Navigate to="/settings/users" replace />} />
+        <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+        <Route path="/queue/:role" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>

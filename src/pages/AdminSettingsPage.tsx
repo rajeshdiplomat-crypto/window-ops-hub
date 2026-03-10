@@ -172,12 +172,7 @@ function AppSettingsEditor() {
 
 export default function AdminSettingsPage() {
   return (
-    <div className="p-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin Settings</h1>
-        <p className="text-sm text-muted-foreground">System configuration</p>
-      </div>
-
+    <div className="max-w-3xl">
       <div className="space-y-4">
         <ConfigList table="salespersons" title="Salespersons" />
         <ConfigList table="dealers" title="Dealers" />

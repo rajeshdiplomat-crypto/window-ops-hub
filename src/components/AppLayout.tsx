@@ -1,43 +1,43 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRoles } from "@/hooks/useUserRoles";
-import { ROLE_QUEUES } from "@/lib/roleQueueConfig";
 import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   Settings,
-  Users,
   LogOut,
   Package,
   Factory,
-  ClipboardList,
+  Eye,
+  DollarSign,
+  Paintbrush,
+  ShoppingCart,
+  ClipboardCheck,
+  Truck,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-const coreNavItems = [
-  { label: "Orders", icon: Package, path: "/" },
+const navItems = [
+  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Sales", icon: Package, path: "/sales" },
+  { label: "Survey", icon: Eye, path: "/survey" },
+  { label: "Finance", icon: DollarSign, path: "/finance" },
+  { label: "Design", icon: Paintbrush, path: "/design" },
+  { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
   { label: "Production", icon: Factory, path: "/production" },
-];
-
-const adminNavItems = [
-  { label: "Users", icon: Users, path: "/admin/users" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
+  { label: "Quality", icon: ClipboardCheck, path: "/quality" },
+  { label: "Dispatch", icon: Truck, path: "/dispatch" },
+  { label: "Installation", icon: Wrench, path: "/installation" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
-  const { roles, hasRole } = useUserRoles();
   const location = useLocation();
 
-  const isAdmin = hasRole("admin") || hasRole("management");
-
-  // Build role-specific queue links
-  const queueLinks = ROLE_QUEUES.filter((q) => hasRole(q.role) || isAdmin);
-
   const renderLink = (path: string, label: string, Icon: any) => {
-    const active = location.pathname === path;
+    const active = location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
     return (
       <Link
         key={path}
@@ -63,22 +63,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <NotificationBell />
         </div>
         <nav className="flex-1 space-y-1 overflow-auto p-2">
-          {coreNavItems.map((item) => renderLink(item.path, item.label, item.icon))}
-
-          {queueLinks.length > 0 && (
-            <>
-              <Separator className="my-2 bg-sidebar-border" />
-              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                My Queues
-              </div>
-              {queueLinks.map((q) =>
-                renderLink(`/queue/${q.role}`, q.label.replace(" Queue", ""), ClipboardList)
-              )}
-            </>
-          )}
-
+          {navItems.map((item) => renderLink(item.path, item.label, item.icon))}
           <Separator className="my-2 bg-sidebar-border" />
-          {adminNavItems.map((item) => renderLink(item.path, item.label, item.icon))}
+          {renderLink("/settings", "Settings", Settings)}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate text-xs text-sidebar-foreground/60">{user?.email}</div>
