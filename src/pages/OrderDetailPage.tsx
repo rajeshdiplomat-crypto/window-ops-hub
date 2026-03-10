@@ -169,6 +169,10 @@ export default function OrderDetailPage() {
         oldValue: oldValue != null ? String(oldValue) : null,
         newValue: value != null ? String(value) : null,
       });
+      // Fire in-app notifications for status changes
+      if (field.endsWith("_status")) {
+        triggerStatusNotification(id!, order.order_name, field, String(value));
+      }
       toast.success("Updated");
       fetchAll();
     }
