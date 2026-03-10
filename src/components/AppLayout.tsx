@@ -1,6 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
@@ -17,9 +18,19 @@ import {
   Wrench,
   Warehouse,
   RefreshCw,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -40,6 +51,23 @@ const navItems = [
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const [profileName, setProfileName] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setProfileName(data.name);
+      });
+  }, [user]);
+
+  const initials = profileName
+    ? profileName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+    : (user?.email?.slice(0, 2).toUpperCase() || "U");
 
   const renderLink = (path: string, label: string, Icon: any) => {
     const active = location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
@@ -65,27 +93,51 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
           <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
           <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
-          <NotificationBell />
         </div>
         <nav className="flex-1 space-y-1 overflow-auto p-2">
           {navItems.map((item) => renderLink(item.path, item.label, item.icon))}
           <Separator className="my-2 bg-sidebar-border" />
           {renderLink("/settings", "Settings", Settings)}
         </nav>
-        <div className="border-t border-sidebar-border p-3">
-          <div className="mb-2 truncate text-xs text-sidebar-foreground/60">{user?.email}</div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={signOut}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
-        </div>
       </aside>
-      <main className="flex-1 overflow-auto">{children}</main>
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="flex h-14 items-center justify-end gap-3 border-b px-4 bg-card shrink-0">
+          <NotificationBell />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <Avatar className="h-9 w-9 border-2 border-primary">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <p className="text-sm font-medium">{profileName || "User"}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 }
