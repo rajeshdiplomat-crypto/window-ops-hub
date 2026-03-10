@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { checkMaterialDependency } from "@/lib/nextActions";
 import { toast } from "sonner";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
@@ -28,6 +29,8 @@ interface OrderWithProduction {
     qc: number;
     packing: number;
   }[];
+  materialStatus: Record<string, any> | null;
+  blockedStages: Record<string, string | null>;
 }
 
 export default function ProductionDashboard() {
@@ -36,27 +39,38 @@ export default function ProductionDashboard() {
 
   useEffect(() => {
     const fetch = async () => {
-      // Get orders that are in production (design released)
-      const { data: ordersData } = await supabase
-        .from("orders")
-        .select("id, order_name, dealer_name, total_windows, design_status")
-        .order("created_at", { ascending: false });
+      const [ordersRes, prodRes, matRes] = await Promise.all([
+        supabase.from("orders").select("id, order_name, dealer_name, total_windows, design_status").order("created_at", { ascending: false }),
+        supabase.from("production_status").select("*"),
+        supabase.from("material_status").select("*"),
+      ]);
 
-      if (!ordersData) { setLoading(false); return; }
+      if (!ordersRes.data) { setLoading(false); return; }
 
-      const { data: prodData } = await supabase
-        .from("production_status")
-        .select("*");
+      const prodData = prodRes.data || [];
+      const matData = matRes.data || [];
 
-      const mapped: OrderWithProduction[] = (ordersData as any[])
+      const matMap: Record<string, any> = {};
+      (matData as any[]).forEach((m) => { matMap[m.order_id] = m; });
+
+      const mapped: OrderWithProduction[] = (ordersRes.data as any[])
         .filter((o) => {
-          const prods = (prodData || []).filter((p: any) => p.order_id === o.id);
+          const prods = (prodData as any[]).filter((p) => p.order_id === o.id);
           return prods.length > 0;
         })
-        .map((o) => ({
-          ...o,
-          production: (prodData || []).filter((p: any) => p.order_id === o.id) as any[],
-        }));
+        .map((o) => {
+          const mat = matMap[o.id] || null;
+          const blockedStages: Record<string, string | null> = {};
+          STAGES.forEach((s) => {
+            blockedStages[s] = checkMaterialDependency(s, mat);
+          });
+          return {
+            ...o,
+            production: (prodData as any[]).filter((p) => p.order_id === o.id),
+            materialStatus: mat,
+            blockedStages,
+          };
+        });
 
       setOrders(mapped);
       setLoading(false);
@@ -67,7 +81,7 @@ export default function ProductionDashboard() {
   const getOrderTotals = (order: OrderWithProduction) => {
     const totals: Record<string, number> = {};
     STAGES.forEach((s) => {
-      totals[s] = order.production.reduce((sum, p) => sum + (p[s] || 0), 0);
+      totals[s] = order.production.reduce((sum, p) => sum + ((p as any)[s] || 0), 0);
     });
     return totals;
   };
@@ -86,12 +100,10 @@ export default function ProductionDashboard() {
         <p className="text-sm text-muted-foreground">{orders.length} orders in production</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         {STAGES.map((stage) => {
-          const totalCompleted = orders.reduce((sum, o) => {
-            return sum + o.production.reduce((s, p) => s + (p[stage] || 0), 0);
-          }, 0);
+          const totalCompleted = orders.reduce((sum, o) =>
+            sum + o.production.reduce((s, p) => s + ((p as any)[stage] || 0), 0), 0);
           const totalWindows = orders.reduce((sum, o) => sum + o.total_windows, 0);
           return (
             <Card key={stage}>
@@ -134,13 +146,20 @@ export default function ProductionDashboard() {
                       <div className="text-xs text-muted-foreground">{order.dealer_name}</div>
                     </TableCell>
                     <TableCell className="text-right font-medium">{order.total_windows}</TableCell>
-                    {STAGES.map((s) => (
-                      <TableCell key={s} className="text-center">
-                        <span className={totals[s] >= order.total_windows ? "text-success font-medium" : ""}>
-                          {totals[s]}
-                        </span>
-                      </TableCell>
-                    ))}
+                    {STAGES.map((s) => {
+                      const blocked = order.blockedStages[s];
+                      return (
+                        <TableCell key={s} className="text-center">
+                          {blocked ? (
+                            <span className="text-xs text-destructive" title={blocked}>🔒</span>
+                          ) : (
+                            <span className={totals[s] >= order.total_windows ? "text-green-600 font-medium" : ""}>
+                              {totals[s]}
+                            </span>
+                          )}
+                        </TableCell>
+                      );
+                    })}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={progress} className="h-2 flex-1" />

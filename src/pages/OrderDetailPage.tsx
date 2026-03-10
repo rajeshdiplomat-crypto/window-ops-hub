@@ -14,6 +14,7 @@ import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
+import { checkMaterialDependency } from "@/lib/nextActions";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
 const STAGE_LABELS: Record<string, string> = {
@@ -314,6 +315,15 @@ export default function OrderDetailPage() {
                               onBlur={async (e) => {
                                 const newVal = Number(e.target.value) || 0;
                                 if (newVal !== p[stage]) {
+                                  // Check material dependency before allowing update
+                                  if (newVal > (p[stage] || 0)) {
+                                    const blocked = checkMaterialDependency(stage, material);
+                                    if (blocked) {
+                                      toast.error(blocked);
+                                      e.target.value = String(p[stage] || 0);
+                                      return;
+                                    }
+                                  }
                                   await logAuditEntry({ entityType: "production_status", entityId: p.id, field: stage, oldValue: String(p[stage]), newValue: String(newVal) });
                                   await supabase.from("production_status").update({ [stage]: newVal }).eq("id", p.id);
                                   fetchAll();
