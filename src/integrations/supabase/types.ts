@@ -47,6 +47,27 @@ export type Database = {
         }
         Relationships: []
       }
+      coating_vendors: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       dispatch: {
         Row: {
           dispatch_date: string | null

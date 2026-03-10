@@ -14,44 +14,87 @@ const ALL_ROLES = [
   "management", "admin",
 ];
 
-interface ProductionUnit {
+interface ConfigItem {
   id: string;
   name: string;
   active: boolean;
 }
 
-export default function AdminSettingsPage() {
-  const [units, setUnits] = useState<ProductionUnit[]>([]);
-  const [newUnitName, setNewUnitName] = useState("");
-  const [loadingUnits, setLoadingUnits] = useState(true);
+function ConfigList({ table, title }: { table: string; title: string }) {
+  const [items, setItems] = useState<ConfigItem[]>([]);
+  const [newName, setNewName] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const fetchUnits = async () => {
-    const { data } = await supabase.from("production_units").select("*").order("created_at");
-    setUnits((data as ProductionUnit[]) || []);
-    setLoadingUnits(false);
+  const fetch = async () => {
+    const { data } = await (supabase.from(table as any).select("*") as any).order("created_at");
+    setItems((data as ConfigItem[]) || []);
+    setLoading(false);
   };
 
-  useEffect(() => { fetchUnits(); }, []);
+  useEffect(() => { fetch(); }, []);
 
-  const addUnit = async () => {
-    const name = newUnitName.trim();
+  const add = async () => {
+    const name = newName.trim();
     if (!name) return;
-    const { error } = await supabase.from("production_units").insert({ name } as any);
+    const { error } = await (supabase.from(table as any) as any).insert({ name });
     if (error) toast.error(error.message);
-    else { toast.success("Unit added"); setNewUnitName(""); fetchUnits(); }
+    else { toast.success(`${title} added`); setNewName(""); fetch(); }
   };
 
-  const toggleUnit = async (unit: ProductionUnit) => {
-    await supabase.from("production_units").update({ active: !unit.active }).eq("id", unit.id);
-    fetchUnits();
+  const toggle = async (item: ConfigItem) => {
+    await (supabase.from(table as any) as any).update({ active: !item.active }).eq("id", item.id);
+    fetch();
   };
 
-  const deleteUnit = async (id: string) => {
-    const { error } = await supabase.from("production_units").delete().eq("id", id);
+  const remove = async (id: string) => {
+    const { error } = await (supabase.from(table as any) as any).delete().eq("id", id);
     if (error) toast.error(error.message);
-    else fetchUnits();
+    else fetch();
   };
 
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2 mb-3">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">None configured</p>
+          ) : (
+            items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                <span className={`text-sm ${!item.active ? "text-muted-foreground line-through" : ""}`}>{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <Switch checked={item.active} onCheckedChange={() => toggle(item)} />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(item.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder={`New ${title.toLowerCase().replace(/s$/, "")} name...`}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            className="flex-1"
+          />
+          <Button size="sm" onClick={add} disabled={!newName.trim()}>
+            <Plus className="h-4 w-4 mr-1" /> Add
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AdminSettingsPage() {
   return (
     <div className="p-6 max-w-3xl">
       <div className="mb-6">
@@ -60,47 +103,9 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Production Units */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Production Units</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 mb-3">
-              {loadingUnits ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              ) : units.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No units configured</p>
-              ) : (
-                units.map((unit) => (
-                  <div key={unit.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                    <span className={`text-sm ${!unit.active ? "text-muted-foreground line-through" : ""}`}>{unit.name}</span>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={unit.active} onCheckedChange={() => toggleUnit(unit)} />
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteUnit(unit.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="New unit name..."
-                value={newUnitName}
-                onChange={(e) => setNewUnitName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addUnit()}
-                className="flex-1"
-              />
-              <Button size="sm" onClick={addUnit} disabled={!newUnitName.trim()}>
-                <Plus className="h-4 w-4 mr-1" /> Add
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <ConfigList table="production_units" title="Production Units" />
+        <ConfigList table="coating_vendors" title="Coating Vendors" />
 
-        {/* Roles */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Available Roles</CardTitle>
@@ -112,7 +117,7 @@ export default function AdminSettingsPage() {
               ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Roles are system-defined. To add or remove roles, contact your administrator.
+              Roles are system-defined.
             </p>
           </CardContent>
         </Card>

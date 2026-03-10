@@ -24,6 +24,87 @@ const STATUS_FIELDS: StatusField[] = [
   "design_status", "dispatch_status", "installation_status",
 ];
 
+const MATERIAL_STATUSES = ["Not Procured", "PO Released", "Received"];
+const ALUMINIUM_STATUSES = ["Not Procured", "PO Released", "Received", "Sent for Coating", "Coating Completed"];
+const INSTALLATION_STATUSES = ["Pending", "Planned", "Completed"];
+
+function MaterialFields({ material, onRefresh }: { material: any; onRefresh: () => void }) {
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("coating_vendors").select("id, name").eq("active", true).then(({ data }) => setVendors((data as any[]) || []));
+  }, []);
+
+  const updateField = async (field: string, value: any) => {
+    const oldVal = material[field];
+    if (String(oldVal ?? "") === String(value ?? "")) return;
+    await logAuditEntry({ entityType: "material_status", entityId: material.id, field, oldValue: oldVal != null ? String(oldVal) : null, newValue: value != null ? String(value) : null });
+    await supabase.from("material_status").update({ [field]: value }).eq("id", material.id);
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Material statuses as dropdowns */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Aluminium Status</Label>
+          <Select value={material.aluminium_status} onValueChange={(v) => updateField("aluminium_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALUMINIUM_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Glass Status</Label>
+          <Select value={material.glass_status} onValueChange={(v) => updateField("glass_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Hardware Status</Label>
+          <Select value={material.hardware_status} onValueChange={(v) => updateField("hardware_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Expected dates */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Aluminium Expected Date", field: "aluminium_expected_date" },
+          { label: "Glass Expected Date", field: "glass_expected_date" },
+          { label: "Hardware Expected Date", field: "hardware_expected_date" },
+        ].map((f) => (
+          <div key={f.field} className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{f.label}</Label>
+            <Input type="date" defaultValue={material[f.field] || ""} onBlur={(e) => updateField(f.field, e.target.value || null)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Coating vendor */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
+          <Select value={material.coating_vendor || ""} onValueChange={(v) => updateField("coating_vendor", v)}>
+            <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
+            <SelectContent>
+              {vendors.map((v) => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
@@ -186,7 +267,7 @@ export default function OrderDetailPage() {
         <TabsContent value="materials" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Material Status</CardTitle>
+              <CardTitle className="text-base">Material Procurement</CardTitle>
               {!material && (
                 <Button size="sm" onClick={async () => {
                   await supabase.from("material_status").insert({ order_id: id });
@@ -196,46 +277,7 @@ export default function OrderDetailPage() {
             </CardHeader>
             {material && (
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {["aluminium_status", "glass_status", "hardware_status"].map((f) => (
-                    <div key={f} className="space-y-1">
-                      <Label className="text-xs text-muted-foreground capitalize">{f.replace(/_/g, " ")}</Label>
-                      <Input
-                        defaultValue={material[f]}
-                        onBlur={async (e) => {
-                          if (e.target.value !== material[f]) {
-                            await logAuditEntry({ entityType: "material_status", entityId: material.id, field: f, oldValue: material[f], newValue: e.target.value });
-                            await supabase.from("material_status").update({ [f]: e.target.value }).eq("id", material.id);
-                            fetchAll();
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
-                  {["aluminium_expected_date", "glass_expected_date", "hardware_expected_date"].map((f) => (
-                    <div key={f} className="space-y-1">
-                      <Label className="text-xs text-muted-foreground capitalize">{f.replace(/_/g, " ")}</Label>
-                      <Input
-                        type="date"
-                        defaultValue={material[f] || ""}
-                        onBlur={async (e) => {
-                          await supabase.from("material_status").update({ [f]: e.target.value || null }).eq("id", material.id);
-                          fetchAll();
-                        }}
-                      />
-                    </div>
-                  ))}
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
-                    <Input
-                      defaultValue={material.coating_vendor || ""}
-                      onBlur={async (e) => {
-                        await supabase.from("material_status").update({ coating_vendor: e.target.value }).eq("id", material.id);
-                        fetchAll();
-                      }}
-                    />
-                  </div>
-                </div>
+                <MaterialFields material={material} onRefresh={fetchAll} />
               </CardContent>
             )}
           </Card>
@@ -287,46 +329,64 @@ export default function OrderDetailPage() {
         <TabsContent value="dispatch" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Dispatch</CardTitle>
+              <div>
+                <CardTitle className="text-base">Dispatch</CardTitle>
+                {order && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(() => {
+                      const totalDispatched = dispatches.reduce((s, d) => s + (d.windows_dispatched || 0), 0);
+                      const remaining = order.total_windows - totalDispatched;
+                      return `Dispatched: ${totalDispatched} / ${order.total_windows} · Remaining: ${remaining}`;
+                    })()}
+                  </p>
+                )}
+              </div>
               <Button size="sm" onClick={async () => {
                 await supabase.from("dispatch").insert({ order_id: id });
                 fetchAll();
-              }}>Add Dispatch</Button>
+              }}>Add Shipment</Button>
             </CardHeader>
             <CardContent>
               {dispatches.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No dispatches yet.</p>
               ) : (
                 <div className="space-y-3">
-                  {dispatches.map((d) => (
-                    <div key={d.id} className="grid grid-cols-2 gap-3 rounded-md border p-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Windows Dispatched</Label>
-                        <Input type="number" defaultValue={d.windows_dispatched} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ windows_dispatched: Number(e.target.value) }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Dispatch Date</Label>
-                        <Input type="date" defaultValue={d.dispatch_date || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ dispatch_date: e.target.value || null }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Transporter</Label>
-                        <Input defaultValue={d.transporter || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ transporter: e.target.value }).eq("id", d.id);
-                          fetchAll();
-                        }} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
-                        <Input defaultValue={d.vehicle_details || ""} onBlur={async (e) => {
-                          await supabase.from("dispatch").update({ vehicle_details: e.target.value }).eq("id", d.id);
-                          fetchAll();
-                        }} />
+                  {dispatches.map((d, idx) => (
+                    <div key={d.id} className="rounded-md border p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Shipment #{idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Windows Dispatched</Label>
+                          <Input type="number" min={0} defaultValue={d.windows_dispatched} onBlur={async (e) => {
+                            const newVal = Number(e.target.value) || 0;
+                            if (newVal !== d.windows_dispatched) {
+                              await logAuditEntry({ entityType: "dispatch", entityId: d.id, field: "windows_dispatched", oldValue: String(d.windows_dispatched), newValue: String(newVal) });
+                              await supabase.from("dispatch").update({ windows_dispatched: newVal }).eq("id", d.id);
+                              fetchAll();
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Dispatch Date</Label>
+                          <Input type="date" defaultValue={d.dispatch_date || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ dispatch_date: e.target.value || null }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Transporter Name</Label>
+                          <Input defaultValue={d.transporter || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ transporter: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
+                          <Input defaultValue={d.vehicle_details || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ vehicle_details: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -353,6 +413,7 @@ export default function OrderDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Planned Date</Label>
                     <Input type="date" defaultValue={installation.installation_planned || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_planned", oldValue: installation.installation_planned, newValue: e.target.value || null });
                       await supabase.from("installation").update({ installation_planned: e.target.value || null }).eq("id", installation.id);
                       fetchAll();
                     }} />
@@ -360,17 +421,25 @@ export default function OrderDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Completed Date</Label>
                     <Input type="date" defaultValue={installation.installation_completed || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_completed", oldValue: installation.installation_completed, newValue: e.target.value || null });
                       await supabase.from("installation").update({ installation_completed: e.target.value || null }).eq("id", installation.id);
                       fetchAll();
                     }} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Status</Label>
-                    <Input defaultValue={installation.installation_status} onBlur={async (e) => {
-                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: e.target.value });
-                      await supabase.from("installation").update({ installation_status: e.target.value }).eq("id", installation.id);
+                    <Label className="text-xs text-muted-foreground">Installation Status</Label>
+                    <Select value={installation.installation_status} onValueChange={async (val) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: val });
+                      await supabase.from("installation").update({ installation_status: val }).eq("id", installation.id);
                       fetchAll();
-                    }} />
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["Pending", "Planned", "Completed"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </CardContent>
