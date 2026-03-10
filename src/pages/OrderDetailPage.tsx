@@ -7,17 +7,44 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
 
+const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
+const STAGE_LABELS: Record<string, string> = {
+  cutting: "Cutting", assembly: "Assembly", glazing: "Glazing", qc: "QC", packing: "Packing",
+};
+
 const STATUS_FIELDS: StatusField[] = [
   "commercial_status", "finance_status", "survey_status",
   "design_status", "dispatch_status", "installation_status",
 ];
+
+function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
+  }, []);
+  return (
+    <Select onValueChange={async (unitName) => {
+      await supabase.from("production_status").insert({ order_id: orderId, unit: unitName } as any);
+      onAdded();
+    }}>
+      <SelectTrigger className="w-36 h-8 text-xs">
+        <SelectValue placeholder="Add unit..." />
+      </SelectTrigger>
+      <SelectContent>
+        {units.map((u) => (
+          <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -217,33 +244,36 @@ export default function OrderDetailPage() {
         <TabsContent value="production" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Production Status</CardTitle>
-              <Button size="sm" onClick={async () => {
-                await supabase.from("production_status").insert({ order_id: id, unit: `Unit ${production.length + 1}` });
-                fetchAll();
-              }}>Add Unit</Button>
+              <CardTitle className="text-base">Production Status ({order.total_windows} total windows)</CardTitle>
+              <AddUnitButton orderId={id!} onAdded={fetchAll} />
             </CardHeader>
             <CardContent>
               {production.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No production units yet.</p>
+                <p className="text-sm text-muted-foreground">No production entries yet. Add a unit to start tracking.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {production.map((p) => (
-                    <div key={p.id} className="rounded-md border p-3">
-                      <p className="font-medium text-sm mb-2">{p.unit || "Unit"}</p>
-                      <div className="flex flex-wrap gap-4">
-                        {["cutting_completed", "assembly_completed", "glazing_completed", "qc_completed", "packing_completed"].map((f) => (
-                          <label key={f} className="flex items-center gap-1.5 text-sm">
-                            <Checkbox
-                              checked={p[f]}
-                              onCheckedChange={async (checked) => {
-                                await logAuditEntry({ entityType: "production_status", entityId: p.id, field: f, oldValue: String(p[f]), newValue: String(!!checked) });
-                                await supabase.from("production_status").update({ [f]: !!checked }).eq("id", p.id);
-                                fetchAll();
+                    <div key={p.id} className="rounded-md border p-4">
+                      <p className="font-medium text-sm mb-3">{p.unit || "Unit"}</p>
+                      <div className="grid grid-cols-5 gap-3">
+                        {STAGES.map((stage) => (
+                          <div key={stage} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{STAGE_LABELS[stage]}</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={order.total_windows}
+                              defaultValue={p[stage] || 0}
+                              onBlur={async (e) => {
+                                const newVal = Number(e.target.value) || 0;
+                                if (newVal !== p[stage]) {
+                                  await logAuditEntry({ entityType: "production_status", entityId: p.id, field: stage, oldValue: String(p[stage]), newValue: String(newVal) });
+                                  await supabase.from("production_status").update({ [stage]: newVal }).eq("id", p.id);
+                                  fetchAll();
+                                }
                               }}
                             />
-                            <span className="capitalize">{f.replace(/_/g, " ").replace(" completed", "")}</span>
-                          </label>
+                          </div>
                         ))}
                       </div>
                     </div>

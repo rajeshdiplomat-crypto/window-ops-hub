@@ -229,33 +229,33 @@ export type Database = {
       }
       production_status: {
         Row: {
-          assembly_completed: boolean
-          cutting_completed: boolean
-          glazing_completed: boolean
+          assembly: number
+          cutting: number
+          glazing: number
           id: string
           order_id: string
-          packing_completed: boolean
-          qc_completed: boolean
+          packing: number
+          qc: number
           unit: string | null
         }
         Insert: {
-          assembly_completed?: boolean
-          cutting_completed?: boolean
-          glazing_completed?: boolean
+          assembly?: number
+          cutting?: number
+          glazing?: number
           id?: string
           order_id: string
-          packing_completed?: boolean
-          qc_completed?: boolean
+          packing?: number
+          qc?: number
           unit?: string | null
         }
         Update: {
-          assembly_completed?: boolean
-          cutting_completed?: boolean
-          glazing_completed?: boolean
+          assembly?: number
+          cutting?: number
+          glazing?: number
           id?: string
           order_id?: string
-          packing_completed?: boolean
-          qc_completed?: boolean
+          packing?: number
+          qc?: number
           unit?: string | null
         }
         Relationships: [
@@ -267,6 +267,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      production_units: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

@@ -7,11 +7,13 @@ import {
   Users,
   LogOut,
   Package,
+  Factory,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { label: "Orders", icon: Package, path: "/" },
+  { label: "Production", icon: Factory, path: "/production" },
   { label: "Users", icon: Users, path: "/admin/users" },
   { label: "Settings", icon: Settings, path: "/admin/settings" },
 ];
