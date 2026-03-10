@@ -166,13 +166,18 @@ export type Database = {
           commercial_status: string
           created_at: string
           dealer_name: string
+          design_status: string
+          dispatch_status: string
+          finance_status: string
           id: string
+          installation_status: string
           order_name: string
           order_value: number
           quote_no: string | null
           sales_order_no: string | null
           salesperson: string | null
           sqft: number
+          survey_status: string
           total_windows: number
           windows_released: number
         }
@@ -183,13 +188,18 @@ export type Database = {
           commercial_status?: string
           created_at?: string
           dealer_name?: string
+          design_status?: string
+          dispatch_status?: string
+          finance_status?: string
           id?: string
+          installation_status?: string
           order_name?: string
           order_value?: number
           quote_no?: string | null
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          survey_status?: string
           total_windows?: number
           windows_released?: number
         }
@@ -200,13 +210,18 @@ export type Database = {
           commercial_status?: string
           created_at?: string
           dealer_name?: string
+          design_status?: string
+          dispatch_status?: string
+          finance_status?: string
           id?: string
+          installation_status?: string
           order_name?: string
           order_value?: number
           quote_no?: string | null
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          survey_status?: string
           total_windows?: number
           windows_released?: number
         }

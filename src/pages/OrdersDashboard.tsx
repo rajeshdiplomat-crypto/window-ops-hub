@@ -38,6 +38,11 @@ interface Order {
   advance_received: number;
   balance_amount: number;
   commercial_status: string;
+  finance_status: string;
+  survey_status: string;
+  design_status: string;
+  dispatch_status: string;
+  installation_status: string;
   created_at: string;
 }
 
@@ -164,23 +169,24 @@ export default function OrdersDashboard() {
           <TableHeader>
             <TableRow>
               <TableHead>Order Name</TableHead>
-              <TableHead>SO No</TableHead>
               <TableHead>Dealer</TableHead>
-              <TableHead>Salesperson</TableHead>
-              <TableHead className="text-right">Windows</TableHead>
-              <TableHead className="text-right">Sqft</TableHead>
+              <TableHead>Commercial</TableHead>
+              <TableHead>Finance</TableHead>
+              <TableHead>Survey</TableHead>
+              <TableHead>Design</TableHead>
+              <TableHead>Dispatch</TableHead>
+              <TableHead>Installation</TableHead>
               <TableHead className="text-right">Value</TableHead>
-              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
               </TableRow>
             ) : (
               filtered.map((order) => (
@@ -189,18 +195,16 @@ export default function OrdersDashboard() {
                     <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
                       {order.order_name}
                     </Link>
+                    <div className="text-xs text-muted-foreground">{order.dealer_name}</div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{order.sales_order_no || "—"}</TableCell>
-                  <TableCell>{order.dealer_name}</TableCell>
-                  <TableCell>{order.salesperson || "—"}</TableCell>
-                  <TableCell className="text-right">{order.total_windows}</TableCell>
-                  <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
+                  <TableCell className="text-sm">{order.dealer_name}</TableCell>
+                  <TableCell><Badge variant="outline" className={statusColor(order.commercial_status)}>{order.commercial_status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{order.finance_status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{order.survey_status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{order.design_status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{order.dispatch_status}</Badge></TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{order.installation_status}</Badge></TableCell>
                   <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={statusColor(order.commercial_status)}>
-                      {order.commercial_status}
-                    </Badge>
-                  </TableCell>
                 </TableRow>
               ))
             )}

@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import StatusDropdown from "@/components/StatusDropdown";
+import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
+import { logAuditEntry } from "@/lib/auditLog";
+
+const STATUS_FIELDS: StatusField[] = [
+  "commercial_status", "finance_status", "survey_status",
+  "design_status", "dispatch_status", "installation_status",
+];
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,9 +49,20 @@ export default function OrderDetailPage() {
   useEffect(() => { fetchAll(); }, [id]);
 
   const updateOrder = async (field: string, value: any) => {
+    const oldValue = order[field];
     const { error } = await supabase.from("orders").update({ [field]: value }).eq("id", id!);
     if (error) toast.error(error.message);
-    else { toast.success("Updated"); fetchAll(); }
+    else {
+      await logAuditEntry({
+        entityType: "orders",
+        entityId: id!,
+        field,
+        oldValue: oldValue != null ? String(oldValue) : null,
+        newValue: value != null ? String(value) : null,
+      });
+      toast.success("Updated");
+      fetchAll();
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>;
@@ -82,14 +101,33 @@ export default function OrderDetailPage() {
         ))}
       </div>
 
-      <Tabs defaultValue="details">
+      <Tabs defaultValue="statuses">
         <TabsList>
+          <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
           <TabsTrigger value="installation">Installation</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="statuses" className="mt-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Workflow Statuses</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {STATUS_FIELDS.map((field) => (
+                  <StatusDropdown
+                    key={field}
+                    field={field}
+                    value={order[field] || STATUS_OPTIONS[field][0]}
+                    onValueChange={(val) => updateOrder(field, val)}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="details" className="mt-4">
           <Card>
@@ -101,7 +139,6 @@ export default function OrderDetailPage() {
                   { label: "Colour / Shade", field: "colour_shade" },
                   { label: "Windows Released", field: "windows_released" },
                   { label: "Advance Received", field: "advance_received" },
-                  { label: "Commercial Status", field: "commercial_status" },
                 ].map((f) => (
                   <div key={f.field} className="space-y-1">
                     <Label className="text-xs text-muted-foreground">{f.label}</Label>
@@ -140,6 +177,7 @@ export default function OrderDetailPage() {
                         defaultValue={material[f]}
                         onBlur={async (e) => {
                           if (e.target.value !== material[f]) {
+                            await logAuditEntry({ entityType: "material_status", entityId: material.id, field: f, oldValue: material[f], newValue: e.target.value });
                             await supabase.from("material_status").update({ [f]: e.target.value }).eq("id", material.id);
                             fetchAll();
                           }
@@ -199,6 +237,7 @@ export default function OrderDetailPage() {
                             <Checkbox
                               checked={p[f]}
                               onCheckedChange={async (checked) => {
+                                await logAuditEntry({ entityType: "production_status", entityId: p.id, field: f, oldValue: String(p[f]), newValue: String(!!checked) });
                                 await supabase.from("production_status").update({ [f]: !!checked }).eq("id", p.id);
                                 fetchAll();
                               }}
@@ -298,6 +337,7 @@ export default function OrderDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Status</Label>
                     <Input defaultValue={installation.installation_status} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: e.target.value });
                       await supabase.from("installation").update({ installation_status: e.target.value }).eq("id", installation.id);
                       fetchAll();
                     }} />
