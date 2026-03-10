@@ -206,11 +206,11 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm">SO No</Label>
+                <Label className="text-sm">Quotation No</Label>
                 <Input
                   value={soNo}
                   onChange={(e) => setSoNo(e.target.value)}
-                  placeholder="Sales order number"
+                  placeholder="Quotation number"
                 />
               </div>
 
