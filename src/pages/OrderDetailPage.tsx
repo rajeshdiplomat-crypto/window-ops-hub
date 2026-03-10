@@ -14,6 +14,7 @@ import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
+import { checkMaterialDependency } from "@/lib/nextActions";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
 const STAGE_LABELS: Record<string, string> = {
