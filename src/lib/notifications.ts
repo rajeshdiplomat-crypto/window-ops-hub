@@ -98,4 +98,7 @@ export async function triggerStatusNotification(
   for (const n of notifications) {
     await notifyRole({ ...n, entityType: "orders", entityId: orderId });
   }
+
+  // Also trigger email alerts via edge function
+  sendEmailAlert(orderId, orderName, field, newValue);
 }
