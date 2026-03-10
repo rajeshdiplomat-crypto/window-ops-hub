@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { ROLE_QUEUES } from "@/lib/roleQueueConfig";
+import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   Settings,
@@ -58,7 +59,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <aside className="flex w-56 flex-col bg-sidebar text-sidebar-foreground">
         <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
           <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
-          <span className="font-semibold text-sm tracking-tight">Window Ops</span>
+          <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
+          <NotificationBell />
         </div>
         <nav className="flex-1 space-y-1 overflow-auto p-2">
           {coreNavItems.map((item) => renderLink(item.path, item.label, item.icon))}

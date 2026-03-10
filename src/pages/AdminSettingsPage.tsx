@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Save } from "lucide-react";
 
 const ALL_ROLES = [
   "sales", "finance", "survey", "design", "procurement",
@@ -94,6 +95,81 @@ function ConfigList({ table, title }: { table: string; title: string }) {
   );
 }
 
+interface AppSetting {
+  id: string;
+  key: string;
+  value: string;
+}
+
+function AppSettingsEditor() {
+  const [settings, setSettings] = useState<AppSetting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+
+  const fetchSettings = async () => {
+    const { data } = await (supabase.from("app_settings" as any).select("*") as any);
+    const items = (data as AppSetting[]) || [];
+    setSettings(items);
+    const vals: Record<string, string> = {};
+    items.forEach((s) => { vals[s.key] = s.value; });
+    setEditValues(vals);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchSettings(); }, []);
+
+  const save = async (key: string) => {
+    const setting = settings.find((s) => s.key === key);
+    if (!setting) return;
+    const { error } = await (supabase.from("app_settings" as any) as any)
+      .update({ value: editValues[key], updated_at: new Date().toISOString() })
+      .eq("id", setting.id);
+    if (error) toast.error(error.message);
+    else toast.success("Setting saved");
+  };
+
+  const SETTING_LABELS: Record<string, string> = {
+    min_advance_percentage: "Minimum Advance Payment (%)",
+    material_dependency_cutting: "Material Rule: Cutting",
+    material_dependency_glazing: "Material Rule: Glazing",
+    material_dependency_assembly: "Material Rule: Assembly",
+  };
+
+  if (loading) return <p className="text-sm text-muted-foreground">Loading settings...</p>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Business Rules</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {settings.map((s) => (
+          <div key={s.id} className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              {SETTING_LABELS[s.key] || s.key}
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={editValues[s.key] || ""}
+                onChange={(e) => setEditValues({ ...editValues, [s.key]: e.target.value })}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => save(s.key)}
+                disabled={editValues[s.key] === s.value}
+              >
+                <Save className="h-3.5 w-3.5 mr-1" /> Save
+              </Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminSettingsPage() {
   return (
     <div className="p-6 max-w-3xl">
@@ -103,8 +179,13 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="space-y-4">
-        <ConfigList table="production_units" title="Production Units" />
+        <ConfigList table="salespersons" title="Salespersons" />
+        <ConfigList table="dealers" title="Dealers" />
+        <ConfigList table="colour_shades" title="Colour Shades" />
         <ConfigList table="coating_vendors" title="Coating Vendors" />
+        <ConfigList table="production_units" title="Production Units" />
+
+        <AppSettingsEditor />
 
         <Card>
           <CardHeader>
