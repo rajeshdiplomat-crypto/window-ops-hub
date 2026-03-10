@@ -20,7 +20,7 @@ const FIELD_MAP: Record<string, string> = {
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
 
 const EXPORT_HEADERS = [
-  "Order Type", "Order Name", "Order Owner", "SO No", "Colour Shade",
+  "Order Type", "Order Name", "Order Owner", "Quotation No", "SO No", "Colour Shade",
   "Salesperson", "Product Type", "No of Windows", "Sqft", "Order Value",
   "Advance Amount", "Balance Amount", "Commercial Status", "Survey Status",
   "Design Status", "Dispatch Status", "Installation Status",
