@@ -219,7 +219,48 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
-        <ProductionTab orderId={id!} totalWindows={order.total_windows} production={production} onRefresh={fetchAll} />
+        <TabsContent value="production" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Production Status ({order.total_windows} total windows)</CardTitle>
+              <AddProductionUnitButton orderId={id!} onAdded={fetchAll} />
+            </CardHeader>
+            <CardContent>
+              {production.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No production entries yet. Add a unit to start tracking.</p>
+              ) : (
+                <div className="space-y-4">
+                  {production.map((p) => (
+                    <div key={p.id} className="rounded-md border p-4">
+                      <p className="font-medium text-sm mb-3">{p.unit || "Unit"}</p>
+                      <div className="grid grid-cols-5 gap-3">
+                        {STAGES.map((stage) => (
+                          <div key={stage} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{STAGE_LABELS[stage]}</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={order.total_windows}
+                              defaultValue={p[stage] || 0}
+                              onBlur={async (e) => {
+                                const newVal = Number(e.target.value) || 0;
+                                if (newVal !== p[stage]) {
+                                  await logAuditEntry({ entityType: "production_status", entityId: p.id, field: stage, oldValue: String(p[stage]), newValue: String(newVal) });
+                                  await supabase.from("production_status").update({ [stage]: newVal }).eq("id", p.id);
+                                  fetchAll();
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="dispatch" className="mt-4">
           <Card>
