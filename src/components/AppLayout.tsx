@@ -15,6 +15,8 @@ import {
   ClipboardCheck,
   Truck,
   Wrench,
+  Warehouse,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
