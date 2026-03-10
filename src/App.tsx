@@ -11,6 +11,7 @@ import OrderDetailPage from "@/pages/OrderDetailPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
+import RoleQueuePage from "@/pages/RoleQueuePage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
