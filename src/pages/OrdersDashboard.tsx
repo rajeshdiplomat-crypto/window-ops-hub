@@ -157,7 +157,10 @@ export default function OrdersDashboard() {
                 <Plus className="h-4 w-4" /> New Order
               </Button>
             </DialogTrigger>
-            </DialogHeader>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Order</DialogTitle>
+              </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
