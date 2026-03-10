@@ -27,6 +27,7 @@ function ProtectedRoutes() {
     <AppLayout>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/orders" element={<DepartmentQueuePage departmentKey="orders" />} />
         <Route path="/sales" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/survey" element={<DepartmentQueuePage departmentKey="survey" />} />
@@ -37,6 +38,8 @@ function ProtectedRoutes() {
         <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
         <Route path="/dispatch" element={<DepartmentQueuePage departmentKey="dispatch" />} />
         <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
+        <Route path="/rework" element={<DepartmentQueuePage departmentKey="rework" />} />
+        <Route path="/store" element={<DepartmentQueuePage departmentKey="store" />} />
         <Route path="/settings" element={<SettingsPage />}>
           <Route index element={<AdminSettingsPage />} />
           <Route path="users" element={<UserManagementPage />} />

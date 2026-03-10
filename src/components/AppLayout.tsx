@@ -15,21 +15,26 @@ import {
   ClipboardCheck,
   Truck,
   Wrench,
+  Warehouse,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Orders", icon: Package, path: "/orders" },
   { label: "Sales", icon: Package, path: "/sales" },
   { label: "Survey", icon: Eye, path: "/survey" },
   { label: "Finance", icon: DollarSign, path: "/finance" },
   { label: "Design", icon: Paintbrush, path: "/design" },
+  { label: "Store", icon: Warehouse, path: "/store" },
   { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
   { label: "Production", icon: Factory, path: "/production" },
   { label: "Quality", icon: ClipboardCheck, path: "/quality" },
   { label: "Dispatch", icon: Truck, path: "/dispatch" },
   { label: "Installation", icon: Wrench, path: "/installation" },
+  { label: "Rework", icon: RefreshCw, path: "/rework" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {

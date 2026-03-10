@@ -38,6 +38,14 @@ export interface DepartmentConfig {
 
 export const DEPARTMENTS: DepartmentConfig[] = [
   {
+    key: "orders",
+    label: "Orders",
+    description: "All orders — global view",
+    role: "sales",
+    statusField: "commercial_status",
+    filter: () => true,
+  },
+  {
     key: "sales",
     label: "Sales",
     description: "Pipeline and confirmed orders",
@@ -86,6 +94,22 @@ export const DEPARTMENTS: DepartmentConfig[] = [
     },
   },
   {
+    key: "store",
+    label: "Store",
+    description: "Orders with materials to receive and manage",
+    role: "stores",
+    statusField: "design_status",
+    filter: (o, mat) => {
+      if (o.design_status !== "Released") return false;
+      if (!mat) return true;
+      return (
+        mat.aluminium_status !== "Coating Completed" ||
+        mat.glass_status !== "Received" ||
+        mat.hardware_status !== "Received"
+      );
+    },
+  },
+  {
     key: "quality",
     label: "Quality",
     description: "Orders awaiting quality inspection",
@@ -120,6 +144,14 @@ export const DEPARTMENTS: DepartmentConfig[] = [
     filter: (o) =>
       (o.dispatch_status === "Partially Dispatched" || o.dispatch_status === "Fully Dispatched") &&
       o.installation_status !== "Completed",
+  },
+  {
+    key: "rework",
+    label: "Rework",
+    description: "Orders requiring rework after installation or QC issues",
+    role: "production",
+    statusField: "installation_status",
+    filter: (o) => o.installation_status === "Completed" && o.dispatch_status === "Fully Dispatched",
   },
 ];
 
