@@ -76,8 +76,8 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    if (!record.order_name && !record.sales_order_no) {
-      result.errors.push(`Row ${i + 2}: Missing Order Name and SO No`);
+    if (!record.order_name && !record.quote_no) {
+      result.errors.push(`Row ${i + 2}: Missing Order Name and Quotation No`);
       continue;
     }
 
