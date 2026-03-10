@@ -6,7 +6,7 @@ const FIELD_MAP: Record<string, string> = {
   "Order Type": "order_type",
   "Order Name": "order_name",
   "Order Owner": "dealer_name",
-  "SO No": "sales_order_no",
+  "Quotation No": "quote_no",
   "Colour Shade": "colour_shade",
   "Salesperson": "salesperson",
   "Product Type": "product_type",
