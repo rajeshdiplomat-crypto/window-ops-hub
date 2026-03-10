@@ -14,16 +14,317 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_log: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          timestamp: string
+          updated_by: string | null
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          timestamp?: string
+          updated_by?: string | null
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          timestamp?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      dispatch: {
+        Row: {
+          dispatch_date: string | null
+          id: string
+          order_id: string
+          transporter: string | null
+          vehicle_details: string | null
+          windows_dispatched: number
+        }
+        Insert: {
+          dispatch_date?: string | null
+          id?: string
+          order_id: string
+          transporter?: string | null
+          vehicle_details?: string | null
+          windows_dispatched?: number
+        }
+        Update: {
+          dispatch_date?: string | null
+          id?: string
+          order_id?: string
+          transporter?: string | null
+          vehicle_details?: string | null
+          windows_dispatched?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installation: {
+        Row: {
+          id: string
+          installation_completed: string | null
+          installation_planned: string | null
+          installation_status: string
+          order_id: string
+        }
+        Insert: {
+          id?: string
+          installation_completed?: string | null
+          installation_planned?: string | null
+          installation_status?: string
+          order_id: string
+        }
+        Update: {
+          id?: string
+          installation_completed?: string | null
+          installation_planned?: string | null
+          installation_status?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_status: {
+        Row: {
+          aluminium_expected_date: string | null
+          aluminium_status: string
+          coating_vendor: string | null
+          glass_expected_date: string | null
+          glass_status: string
+          hardware_expected_date: string | null
+          hardware_status: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          aluminium_expected_date?: string | null
+          aluminium_status?: string
+          coating_vendor?: string | null
+          glass_expected_date?: string | null
+          glass_status?: string
+          hardware_expected_date?: string | null
+          hardware_status?: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          aluminium_expected_date?: string | null
+          aluminium_status?: string
+          coating_vendor?: string | null
+          glass_expected_date?: string | null
+          glass_status?: string
+          hardware_expected_date?: string | null
+          hardware_status?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_status_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          advance_received: number
+          balance_amount: number
+          colour_shade: string | null
+          commercial_status: string
+          created_at: string
+          dealer_name: string
+          id: string
+          order_name: string
+          order_value: number
+          quote_no: string | null
+          sales_order_no: string | null
+          salesperson: string | null
+          sqft: number
+          total_windows: number
+          windows_released: number
+        }
+        Insert: {
+          advance_received?: number
+          balance_amount?: number
+          colour_shade?: string | null
+          commercial_status?: string
+          created_at?: string
+          dealer_name?: string
+          id?: string
+          order_name?: string
+          order_value?: number
+          quote_no?: string | null
+          sales_order_no?: string | null
+          salesperson?: string | null
+          sqft?: number
+          total_windows?: number
+          windows_released?: number
+        }
+        Update: {
+          advance_received?: number
+          balance_amount?: number
+          colour_shade?: string | null
+          commercial_status?: string
+          created_at?: string
+          dealer_name?: string
+          id?: string
+          order_name?: string
+          order_value?: number
+          quote_no?: string | null
+          sales_order_no?: string | null
+          salesperson?: string | null
+          sqft?: number
+          total_windows?: number
+          windows_released?: number
+        }
+        Relationships: []
+      }
+      production_status: {
+        Row: {
+          assembly_completed: boolean
+          cutting_completed: boolean
+          glazing_completed: boolean
+          id: string
+          order_id: string
+          packing_completed: boolean
+          qc_completed: boolean
+          unit: string | null
+        }
+        Insert: {
+          assembly_completed?: boolean
+          cutting_completed?: boolean
+          glazing_completed?: boolean
+          id?: string
+          order_id: string
+          packing_completed?: boolean
+          qc_completed?: boolean
+          unit?: string | null
+        }
+        Update: {
+          assembly_completed?: boolean
+          cutting_completed?: boolean
+          glazing_completed?: boolean
+          id?: string
+          order_id?: string
+          packing_completed?: boolean
+          qc_completed?: boolean
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_status_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "sales"
+        | "finance"
+        | "survey"
+        | "design"
+        | "procurement"
+        | "stores"
+        | "production"
+        | "quality"
+        | "dispatch"
+        | "installation"
+        | "management"
+        | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +451,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "sales",
+        "finance",
+        "survey",
+        "design",
+        "procurement",
+        "stores",
+        "production",
+        "quality",
+        "dispatch",
+        "installation",
+        "management",
+        "admin",
+      ],
+    },
   },
 } as const
