@@ -87,12 +87,12 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    // Check if order exists by sales_order_no
-    if (record.sales_order_no) {
+    // Check if order exists by quote_no
+    if (record.quote_no) {
       const { data: existing } = await supabase
         .from("orders")
         .select("id")
-        .eq("sales_order_no", record.sales_order_no)
+        .eq("quote_no", record.quote_no)
         .maybeSingle();
 
       if (existing) {
