@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { ROLE_QUEUES } from "@/lib/roleQueueConfig";
+import NotificationBell from "@/components/NotificationBell";
 import {
   LayoutDashboard,
   Settings,
