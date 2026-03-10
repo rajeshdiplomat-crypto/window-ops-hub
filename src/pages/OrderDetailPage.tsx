@@ -24,7 +24,28 @@ const STATUS_FIELDS: StatusField[] = [
   "design_status", "dispatch_status", "installation_status",
 ];
 
-export default function OrderDetailPage() {
+function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
+  }, []);
+  return (
+    <Select onValueChange={async (unitName) => {
+      await supabase.from("production_status").insert({ order_id: orderId, unit: unitName } as any);
+      onAdded();
+    }}>
+      <SelectTrigger className="w-36 h-8 text-xs">
+        <SelectValue placeholder="Add unit..." />
+      </SelectTrigger>
+      <SelectContent>
+        {units.map((u) => (
+          <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
   const [material, setMaterial] = useState<any>(null);
