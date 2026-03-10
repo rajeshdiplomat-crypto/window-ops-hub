@@ -184,61 +184,7 @@ export default function OrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Material Status</CardTitle>
-              {!material && (
-                <Button size="sm" onClick={async () => {
-                  await supabase.from("material_status").insert({ order_id: id });
-                  fetchAll();
-                }}>Initialize</Button>
-              )}
-            </CardHeader>
-            {material && (
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {["aluminium_status", "glass_status", "hardware_status"].map((f) => (
-                    <div key={f} className="space-y-1">
-                      <Label className="text-xs text-muted-foreground capitalize">{f.replace(/_/g, " ")}</Label>
-                      <Input
-                        defaultValue={material[f]}
-                        onBlur={async (e) => {
-                          if (e.target.value !== material[f]) {
-                            await logAuditEntry({ entityType: "material_status", entityId: material.id, field: f, oldValue: material[f], newValue: e.target.value });
-                            await supabase.from("material_status").update({ [f]: e.target.value }).eq("id", material.id);
-                            fetchAll();
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
-                  {["aluminium_expected_date", "glass_expected_date", "hardware_expected_date"].map((f) => (
-                    <div key={f} className="space-y-1">
-                      <Label className="text-xs text-muted-foreground capitalize">{f.replace(/_/g, " ")}</Label>
-                      <Input
-                        type="date"
-                        defaultValue={material[f] || ""}
-                        onBlur={async (e) => {
-                          await supabase.from("material_status").update({ [f]: e.target.value || null }).eq("id", material.id);
-                          fetchAll();
-                        }}
-                      />
-                    </div>
-                  ))}
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
-                    <Input
-                      defaultValue={material.coating_vendor || ""}
-                      onBlur={async (e) => {
-                        await supabase.from("material_status").update({ coating_vendor: e.target.value }).eq("id", material.id);
-                        fetchAll();
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+          <MaterialsTab material={material} orderId={id!} onRefresh={fetchAll} />
         </TabsContent>
 
         <TabsContent value="production" className="mt-4">
