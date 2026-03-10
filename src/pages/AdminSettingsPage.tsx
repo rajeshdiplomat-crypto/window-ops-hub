@@ -26,7 +26,7 @@ function ConfigList({ table, title }: { table: string; title: string }) {
   const [loading, setLoading] = useState(true);
 
   const fetch = async () => {
-    const { data } = await supabase.from(table).select("*").order("created_at");
+    const { data } = await (supabase.from(table as any).select("*") as any).order("created_at");
     setItems((data as ConfigItem[]) || []);
     setLoading(false);
   };
@@ -36,18 +36,18 @@ function ConfigList({ table, title }: { table: string; title: string }) {
   const add = async () => {
     const name = newName.trim();
     if (!name) return;
-    const { error } = await supabase.from(table).insert({ name } as any);
+    const { error } = await (supabase.from(table as any) as any).insert({ name });
     if (error) toast.error(error.message);
     else { toast.success(`${title} added`); setNewName(""); fetch(); }
   };
 
   const toggle = async (item: ConfigItem) => {
-    await supabase.from(table).update({ active: !item.active }).eq("id", item.id);
+    await (supabase.from(table as any) as any).update({ active: !item.active }).eq("id", item.id);
     fetch();
   };
 
   const remove = async (id: string) => {
-    const { error } = await supabase.from(table).delete().eq("id", id);
+    const { error } = await (supabase.from(table as any) as any).delete().eq("id", id);
     if (error) toast.error(error.message);
     else fetch();
   };
