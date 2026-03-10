@@ -209,7 +209,7 @@ export default function DepartmentQueuePage({ departmentKey }: DepartmentQueuePa
               orders.map((order) => {
                 const statusValue = (order as any)[dept.statusField] as string;
                 const nextAction = getNextAction(
-                  dept.role,
+                  dept.role as any,
                   order,
                   materialMap[order.id] || null,
                   productionMap[order.id] || null,
