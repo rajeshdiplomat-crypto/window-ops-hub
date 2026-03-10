@@ -105,6 +105,7 @@ function MaterialFields({ material, onRefresh }: { material: any; onRefresh: () 
   );
 }
 
+function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
