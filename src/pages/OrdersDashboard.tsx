@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate } from "@/lib/excelUtils";
+import CreateOrderDialog from "@/components/CreateOrderDialog";
 
 interface Order {
   id: string;
