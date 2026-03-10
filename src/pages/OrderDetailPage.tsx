@@ -223,7 +223,7 @@ export default function OrderDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Production Status ({order.total_windows} total windows)</CardTitle>
-              <AddProductionUnitButton orderId={id!} onAdded={fetchAll} />
+              <AddUnitButton orderId={id!} onAdded={fetchAll} />
             </CardHeader>
             <CardContent>
               {production.length === 0 ? (
