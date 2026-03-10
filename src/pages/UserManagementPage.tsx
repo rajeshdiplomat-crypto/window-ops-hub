@@ -72,12 +72,7 @@ export default function UserManagementPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">User Management</h1>
-        <p className="text-sm text-muted-foreground">Manage users and their roles</p>
-      </div>
-
+    <div>
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
