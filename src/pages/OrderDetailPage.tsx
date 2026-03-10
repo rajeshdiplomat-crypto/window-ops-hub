@@ -46,7 +46,8 @@ function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => v
   );
 }
 
-  export default function OrderDetailPage() {
+export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
   const [material, setMaterial] = useState<any>(null);
   const [production, setProduction] = useState<any[]>([]);
