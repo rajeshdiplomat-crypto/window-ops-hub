@@ -24,7 +24,87 @@ const STATUS_FIELDS: StatusField[] = [
   "design_status", "dispatch_status", "installation_status",
 ];
 
-function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
+const MATERIAL_STATUSES = ["Not Procured", "PO Released", "Received"];
+const ALUMINIUM_STATUSES = ["Not Procured", "PO Released", "Received", "Sent for Coating", "Coating Completed"];
+const INSTALLATION_STATUSES = ["Pending", "Planned", "Completed"];
+
+function MaterialFields({ material, onRefresh }: { material: any; onRefresh: () => void }) {
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("coating_vendors").select("id, name").eq("active", true).then(({ data }) => setVendors((data as any[]) || []));
+  }, []);
+
+  const updateField = async (field: string, value: any) => {
+    const oldVal = material[field];
+    if (String(oldVal ?? "") === String(value ?? "")) return;
+    await logAuditEntry({ entityType: "material_status", entityId: material.id, field, oldValue: oldVal != null ? String(oldVal) : null, newValue: value != null ? String(value) : null });
+    await supabase.from("material_status").update({ [field]: value }).eq("id", material.id);
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Material statuses as dropdowns */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Aluminium Status</Label>
+          <Select value={material.aluminium_status} onValueChange={(v) => updateField("aluminium_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALUMINIUM_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Glass Status</Label>
+          <Select value={material.glass_status} onValueChange={(v) => updateField("glass_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Hardware Status</Label>
+          <Select value={material.hardware_status} onValueChange={(v) => updateField("hardware_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Expected dates */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Aluminium Expected Date", field: "aluminium_expected_date" },
+          { label: "Glass Expected Date", field: "glass_expected_date" },
+          { label: "Hardware Expected Date", field: "hardware_expected_date" },
+        ].map((f) => (
+          <div key={f.field} className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{f.label}</Label>
+            <Input type="date" defaultValue={material[f.field] || ""} onBlur={(e) => updateField(f.field, e.target.value || null)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Coating vendor */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
+          <Select value={material.coating_vendor || ""} onValueChange={(v) => updateField("coating_vendor", v)}>
+            <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
+            <SelectContent>
+              {vendors.map((v) => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
