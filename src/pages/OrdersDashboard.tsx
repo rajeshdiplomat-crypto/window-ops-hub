@@ -92,6 +92,25 @@ export default function OrdersDashboard() {
     }
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const result = await importOrdersFromFile(file);
+      toast.success(`Import complete: ${result.created} created, ${result.updated} updated`);
+      if (result.errors.length > 0) {
+        result.errors.forEach((err) => toast.error(err));
+      }
+      fetchOrders();
+    } catch (err: any) {
+      toast.error("Import failed: " + err.message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
