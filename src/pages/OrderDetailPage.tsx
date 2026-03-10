@@ -184,7 +184,22 @@ export default function OrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4">
-          <MaterialsTab material={material} orderId={id!} onRefresh={fetchAll} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Material Procurement</CardTitle>
+              {!material && (
+                <Button size="sm" onClick={async () => {
+                  await supabase.from("material_status").insert({ order_id: id });
+                  fetchAll();
+                }}>Initialize</Button>
+              )}
+            </CardHeader>
+            {material && (
+              <CardContent>
+                <MaterialFields material={material} onRefresh={fetchAll} />
+              </CardContent>
+            )}
+          </Card>
         </TabsContent>
 
         <TabsContent value="production" className="mt-4">
