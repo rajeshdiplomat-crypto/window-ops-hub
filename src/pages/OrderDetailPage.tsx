@@ -18,9 +18,6 @@ const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
 const STAGE_LABELS: Record<string, string> = {
   cutting: "Cutting", assembly: "Assembly", glazing: "Glazing", qc: "QC", packing: "Packing",
 };
-import StatusDropdown from "@/components/StatusDropdown";
-import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
-import { logAuditEntry } from "@/lib/auditLog";
 
 const STATUS_FIELDS: StatusField[] = [
   "commercial_status", "finance_status", "survey_status",
