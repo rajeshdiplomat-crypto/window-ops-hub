@@ -27,6 +27,7 @@ function ProtectedRoutes() {
         <Route path="/" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/production" element={<ProductionDashboard />} />
+        <Route path="/queue/:role" element={<RoleQueuePage />} />
         <Route path="/admin/users" element={<UserManagementPage />} />
         <Route path="/admin/settings" element={<AdminSettingsPage />} />
         <Route path="*" element={<NotFound />} />
