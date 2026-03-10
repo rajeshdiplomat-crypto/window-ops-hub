@@ -7,9 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import StatusDropdown from "@/components/StatusDropdown";
+import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
+import { logAuditEntry } from "@/lib/auditLog";
+
+const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
+const STAGE_LABELS: Record<string, string> = {
+  cutting: "Cutting", assembly: "Assembly", glazing: "Glazing", qc: "QC", packing: "Packing",
+};
 import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
