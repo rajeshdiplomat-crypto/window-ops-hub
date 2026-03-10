@@ -33,16 +33,18 @@ export default function RoleQueuePage() {
     if (!queueDef) { setLoading(false); return; }
 
     const fetchOrders = async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
 
-      // Apply filter using the field and values from queue config
-      query = query.in(queueDef.filterField as any, queueDef.filterValues);
-
       if (error) toast.error("Failed to load queue");
-      else setOrders((data as Order[]) || []);
+      else {
+        const filtered = (data || []).filter((o: any) =>
+          queueDef.filterValues.includes(o[queueDef.filterField])
+        );
+        setOrders(filtered as Order[]);
+      }
       setLoading(false);
     };
 
