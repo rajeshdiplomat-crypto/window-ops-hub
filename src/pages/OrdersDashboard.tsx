@@ -38,6 +38,11 @@ interface Order {
   advance_received: number;
   balance_amount: number;
   commercial_status: string;
+  finance_status: string;
+  survey_status: string;
+  design_status: string;
+  dispatch_status: string;
+  installation_status: string;
   created_at: string;
 }
 
