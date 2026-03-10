@@ -292,7 +292,10 @@ export type Database = {
           id: string
           installation_status: string
           order_name: string
+          order_type: string
           order_value: number
+          other_product_type: string | null
+          product_type: string
           quote_no: string | null
           sales_order_no: string | null
           salesperson: string | null
@@ -314,7 +317,10 @@ export type Database = {
           id?: string
           installation_status?: string
           order_name?: string
+          order_type?: string
           order_value?: number
+          other_product_type?: string | null
+          product_type?: string
           quote_no?: string | null
           sales_order_no?: string | null
           salesperson?: string | null
@@ -336,7 +342,10 @@ export type Database = {
           id?: string
           installation_status?: string
           order_name?: string
+          order_type?: string
           order_value?: number
+          other_product_type?: string | null
+          product_type?: string
           quote_no?: string | null
           sales_order_no?: string | null
           salesperson?: string | null
@@ -344,6 +353,27 @@ export type Database = {
           survey_status?: string
           total_windows?: number
           windows_released?: number
+        }
+        Relationships: []
+      }
+      other_product_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -433,6 +463,48 @@ export type Database = {
           id?: string
           name?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      project_client_names: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      project_names: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
