@@ -7,13 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Plus, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate } from "@/lib/excelUtils";
+import CreateOrderDialog from "@/components/CreateOrderDialog";
 
 interface Order {
   id: string;
@@ -71,26 +68,7 @@ export default function OrdersDashboard() {
       (o.sales_order_no || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const payload = {
-      order_name: fd.get("order_name") as string,
-      dealer_name: fd.get("dealer_name") as string,
-      salesperson: fd.get("salesperson") as string,
-      quote_no: fd.get("quote_no") as string,
-      total_windows: Number(fd.get("total_windows")) || 0,
-      sqft: Number(fd.get("sqft")) || 0,
-      order_value: Number(fd.get("order_value")) || 0,
-    };
-    const { error } = await supabase.from("orders").insert(payload);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Order created");
-      setDialogOpen(false);
-      fetchOrders();
-    }
-  };
+  // handleCreate removed - now in CreateOrderDialog
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -151,51 +129,14 @@ export default function OrdersDashboard() {
           >
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" /> New Order
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Order</DialogTitle>
-              </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Order Name</Label>
-                  <Input name="order_name" required />
-                </div>
-                <div className="space-y-1">
-                  <Label>Dealer Name</Label>
-                  <Input name="dealer_name" required />
-                </div>
-                <div className="space-y-1">
-                  <Label>Quote No</Label>
-                  <Input name="quote_no" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Salesperson</Label>
-                  <Input name="salesperson" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Total Windows</Label>
-                  <Input name="total_windows" type="number" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Sqft</Label>
-                  <Input name="sqft" type="number" step="0.01" />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <Label>Order Value</Label>
-                  <Input name="order_value" type="number" step="0.01" />
-                </div>
-              </div>
-              <Button type="submit" className="w-full">Create</Button>
-            </form>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" /> New Order
+          </Button>
+          <CreateOrderDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            onCreated={fetchOrders}
+          />
         </div>
       </div>
 
@@ -216,7 +157,8 @@ export default function OrdersDashboard() {
           <TableHeader>
             <TableRow>
               <TableHead>Order Name</TableHead>
-              <TableHead>Dealer</TableHead>
+              <TableHead>Owner</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Commercial</TableHead>
               <TableHead>Finance</TableHead>
               <TableHead>Survey</TableHead>
@@ -242,9 +184,9 @@ export default function OrdersDashboard() {
                     <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
                       {order.order_name}
                     </Link>
-                    <div className="text-xs text-muted-foreground">{order.dealer_name}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.dealer_name}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{(order as any).order_type || "Retail"}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className={statusColor(order.commercial_status)}>{order.commercial_status}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{order.finance_status}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{order.survey_status}</Badge></TableCell>
