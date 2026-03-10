@@ -72,26 +72,7 @@ export default function OrdersDashboard() {
       (o.sales_order_no || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const payload = {
-      order_name: fd.get("order_name") as string,
-      dealer_name: fd.get("dealer_name") as string,
-      salesperson: fd.get("salesperson") as string,
-      quote_no: fd.get("quote_no") as string,
-      total_windows: Number(fd.get("total_windows")) || 0,
-      sqft: Number(fd.get("sqft")) || 0,
-      order_value: Number(fd.get("order_value")) || 0,
-    };
-    const { error } = await supabase.from("orders").insert(payload);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Order created");
-      setDialogOpen(false);
-      fetchOrders();
-    }
-  };
+  // handleCreate removed - now in CreateOrderDialog
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
