@@ -188,9 +188,9 @@ export default function OrdersDashboard() {
                     <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
                       {order.order_name}
                     </Link>
-                    <div className="text-xs text-muted-foreground">{order.dealer_name}</div>
                   </TableCell>
                   <TableCell className="text-sm">{order.dealer_name}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-xs">{(order as any).order_type || "Retail"}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className={statusColor(order.commercial_status)}>{order.commercial_status}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{order.finance_status}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{order.survey_status}</Badge></TableCell>

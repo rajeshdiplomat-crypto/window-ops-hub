@@ -175,8 +175,11 @@ export default function AdminSettingsPage() {
     <div className="max-w-3xl">
       <div className="space-y-4">
         <ConfigList table="salespersons" title="Salespersons" />
-        <ConfigList table="dealers" title="Dealers" />
+        <ConfigList table="dealers" title="Dealer Names" />
+        <ConfigList table="project_names" title="Project Names" />
+        <ConfigList table="project_client_names" title="Project Client Names" />
         <ConfigList table="colour_shades" title="Colour Shades" />
+        <ConfigList table="other_product_types" title="Other Product Types" />
         <ConfigList table="coating_vendors" title="Coating Vendors" />
         <ConfigList table="production_units" title="Production Units" />
 
