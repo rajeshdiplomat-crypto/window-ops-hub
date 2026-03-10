@@ -77,12 +77,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </>
           )}
 
-          {isAdmin && (
-            <>
-              <Separator className="my-2 bg-sidebar-border" />
-              {adminNavItems.map((item) => renderLink(item.path, item.label, item.icon))}
-            </>
-          )}
+          <Separator className="my-2 bg-sidebar-border" />
+          {adminNavItems.map((item) => renderLink(item.path, item.label, item.icon))}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate text-xs text-sidebar-foreground/60">{user?.email}</div>
