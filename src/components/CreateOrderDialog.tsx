@@ -99,14 +99,14 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
     if (productType === "Windows" && (Number(qty) || 0) <= 0) return toast.error("Number of Windows must be > 0");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
 
-    // SO uniqueness check
+    // Quotation number uniqueness check
     if (soNo.trim()) {
       const { data: existing } = await supabase
         .from("orders")
         .select("id")
-        .eq("sales_order_no", soNo.trim())
+        .eq("quote_no", soNo.trim())
         .maybeSingle();
-      if (existing) return toast.error("SO Number already exists");
+      if (existing) return toast.error("Quotation Number already exists");
     }
 
     setSubmitting(true);
@@ -114,7 +114,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       order_type: orderType,
       order_name: orderName.trim(),
       dealer_name: orderOwner,
-      sales_order_no: soNo.trim() || null,
+      quote_no: soNo.trim() || null,
       colour_shade: colourShade || null,
       salesperson: salesperson || null,
       product_type: productType,
@@ -206,11 +206,11 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm">SO No</Label>
+                <Label className="text-sm">Quotation No</Label>
                 <Input
                   value={soNo}
                   onChange={(e) => setSoNo(e.target.value)}
-                  placeholder="Sales order number"
+                  placeholder="Quotation number"
                 />
               </div>
 

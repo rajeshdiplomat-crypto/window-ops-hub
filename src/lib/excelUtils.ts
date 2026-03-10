@@ -6,7 +6,7 @@ const FIELD_MAP: Record<string, string> = {
   "Order Type": "order_type",
   "Order Name": "order_name",
   "Order Owner": "dealer_name",
-  "SO No": "sales_order_no",
+  "Quotation No": "quote_no",
   "Colour Shade": "colour_shade",
   "Salesperson": "salesperson",
   "Product Type": "product_type",
@@ -20,7 +20,7 @@ const FIELD_MAP: Record<string, string> = {
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
 
 const EXPORT_HEADERS = [
-  "Order Type", "Order Name", "Order Owner", "SO No", "Colour Shade",
+  "Order Type", "Order Name", "Order Owner", "Quotation No", "SO No", "Colour Shade",
   "Salesperson", "Product Type", "No of Windows", "Sqft", "Order Value",
   "Advance Amount", "Balance Amount", "Commercial Status", "Survey Status",
   "Design Status", "Dispatch Status", "Installation Status",
@@ -76,8 +76,8 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    if (!record.order_name && !record.sales_order_no) {
-      result.errors.push(`Row ${i + 2}: Missing Order Name and SO No`);
+    if (!record.order_name && !record.quote_no) {
+      result.errors.push(`Row ${i + 2}: Missing Order Name and Quotation No`);
       continue;
     }
 
@@ -87,12 +87,12 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    // Check if order exists by sales_order_no
-    if (record.sales_order_no) {
+    // Check if order exists by quote_no
+    if (record.quote_no) {
       const { data: existing } = await supabase
         .from("orders")
         .select("id")
-        .eq("sales_order_no", record.sales_order_no)
+        .eq("quote_no", record.quote_no)
         .maybeSingle();
 
       if (existing) {
@@ -129,6 +129,7 @@ export function exportOrdersToExcel(orders: Record<string, any>[], filename = "o
     "Order Type": o.order_type || "Retail",
     "Order Name": o.order_name || "",
     "Order Owner": o.dealer_name || "",
+    "Quotation No": o.quote_no || "",
     "SO No": o.sales_order_no || "",
     "Colour Shade": o.colour_shade || "",
     "Salesperson": o.salesperson || "",
