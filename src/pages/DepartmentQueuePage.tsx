@@ -38,6 +38,14 @@ export interface DepartmentConfig {
 
 export const DEPARTMENTS: DepartmentConfig[] = [
   {
+    key: "orders",
+    label: "Orders",
+    description: "All orders — global view",
+    role: "sales",
+    statusField: "commercial_status",
+    filter: () => true,
+  },
+  {
     key: "sales",
     label: "Sales",
     description: "Pipeline and confirmed orders",
