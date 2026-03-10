@@ -133,51 +133,14 @@ export default function OrdersDashboard() {
           >
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" /> New Order
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Order</DialogTitle>
-              </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Order Name</Label>
-                  <Input name="order_name" required />
-                </div>
-                <div className="space-y-1">
-                  <Label>Dealer Name</Label>
-                  <Input name="dealer_name" required />
-                </div>
-                <div className="space-y-1">
-                  <Label>Quote No</Label>
-                  <Input name="quote_no" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Salesperson</Label>
-                  <Input name="salesperson" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Total Windows</Label>
-                  <Input name="total_windows" type="number" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Sqft</Label>
-                  <Input name="sqft" type="number" step="0.01" />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <Label>Order Value</Label>
-                  <Input name="order_value" type="number" step="0.01" />
-                </div>
-              </div>
-              <Button type="submit" className="w-full">Create</Button>
-            </form>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" /> New Order
+          </Button>
+          <CreateOrderDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            onCreated={fetchOrders}
+          />
         </div>
       </div>
 
