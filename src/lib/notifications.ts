@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/** Call the send-alert edge function for email alerts */
+export async function sendEmailAlert(orderId: string, orderName: string, field: string, newValue: string, oldValue?: string) {
+  try {
+    await supabase.functions.invoke("send-alert", {
+      body: { order_id: orderId, order_name: orderName, field, new_value: newValue, old_value: oldValue },
+    });
+  } catch (e) {
+    console.error("Email alert failed:", e);
+  }
+}
+
 interface NotifyRoleParams {
   role: string;
   title: string;
