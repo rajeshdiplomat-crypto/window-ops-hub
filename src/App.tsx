@@ -10,6 +10,7 @@ import OrdersDashboard from "@/pages/OrdersDashboard";
 import OrderDetailPage from "@/pages/OrderDetailPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
+import ProductionDashboard from "@/pages/ProductionDashboard";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();

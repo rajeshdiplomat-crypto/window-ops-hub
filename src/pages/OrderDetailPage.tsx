@@ -222,45 +222,7 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="production" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Production Status</CardTitle>
-              <Button size="sm" onClick={async () => {
-                await supabase.from("production_status").insert({ order_id: id, unit: `Unit ${production.length + 1}` });
-                fetchAll();
-              }}>Add Unit</Button>
-            </CardHeader>
-            <CardContent>
-              {production.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No production units yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {production.map((p) => (
-                    <div key={p.id} className="rounded-md border p-3">
-                      <p className="font-medium text-sm mb-2">{p.unit || "Unit"}</p>
-                      <div className="flex flex-wrap gap-4">
-                        {["cutting_completed", "assembly_completed", "glazing_completed", "qc_completed", "packing_completed"].map((f) => (
-                          <label key={f} className="flex items-center gap-1.5 text-sm">
-                            <Checkbox
-                              checked={p[f]}
-                              onCheckedChange={async (checked) => {
-                                await logAuditEntry({ entityType: "production_status", entityId: p.id, field: f, oldValue: String(p[f]), newValue: String(!!checked) });
-                                await supabase.from("production_status").update({ [f]: !!checked }).eq("id", p.id);
-                                fetchAll();
-                              }}
-                            />
-                            <span className="capitalize">{f.replace(/_/g, " ").replace(" completed", "")}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <ProductionTab orderId={id!} totalWindows={order.total_windows} production={production} onRefresh={fetchAll} />
 
         <TabsContent value="dispatch" className="mt-4">
           <Card>
