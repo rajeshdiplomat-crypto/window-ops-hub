@@ -94,6 +94,22 @@ export const DEPARTMENTS: DepartmentConfig[] = [
     },
   },
   {
+    key: "store",
+    label: "Store",
+    description: "Orders with materials to receive and manage",
+    role: "stores",
+    statusField: "design_status",
+    filter: (o, mat) => {
+      if (o.design_status !== "Released") return false;
+      if (!mat) return true;
+      return (
+        mat.aluminium_status !== "Coating Completed" ||
+        mat.glass_status !== "Received" ||
+        mat.hardware_status !== "Received"
+      );
+    },
+  },
+  {
     key: "quality",
     label: "Quality",
     description: "Orders awaiting quality inspection",
