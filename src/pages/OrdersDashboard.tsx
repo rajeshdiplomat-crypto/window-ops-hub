@@ -1,27 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
+import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate } from "@/lib/excelUtils";
 
 interface Order {
   id: string;
@@ -60,6 +52,8 @@ export default function OrdersDashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchOrders = async () => {
     const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
@@ -98,6 +92,25 @@ export default function OrdersDashboard() {
     }
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const result = await importOrdersFromFile(file);
+      toast.success(`Import complete: ${result.created} created, ${result.updated} updated`);
+      if (result.errors.length > 0) {
+        result.errors.forEach((err) => toast.error(err));
+      }
+      fetchOrders();
+    } catch (err: any) {
+      toast.error("Import failed: " + err.message);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -105,16 +118,49 @@ export default function OrdersDashboard() {
           <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
           <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" /> New Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Order</DialogTitle>
-            </DialogHeader>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={handleImport}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => downloadImportTemplate()}
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Template
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={importing}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => exportOrdersToExcel(filtered)}
+          >
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" /> New Order
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Order</DialogTitle>
+              </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -148,8 +194,9 @@ export default function OrdersDashboard() {
               </div>
               <Button type="submit" className="w-full">Create</Button>
             </form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
