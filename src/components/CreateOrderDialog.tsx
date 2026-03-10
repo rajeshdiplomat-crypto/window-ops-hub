@@ -99,14 +99,14 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
     if (productType === "Windows" && (Number(qty) || 0) <= 0) return toast.error("Number of Windows must be > 0");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
 
-    // SO uniqueness check
+    // Quotation number uniqueness check
     if (soNo.trim()) {
       const { data: existing } = await supabase
         .from("orders")
         .select("id")
-        .eq("sales_order_no", soNo.trim())
+        .eq("quote_no", soNo.trim())
         .maybeSingle();
-      if (existing) return toast.error("SO Number already exists");
+      if (existing) return toast.error("Quotation Number already exists");
     }
 
     setSubmitting(true);
