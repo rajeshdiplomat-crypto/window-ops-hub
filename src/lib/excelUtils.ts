@@ -129,6 +129,7 @@ export function exportOrdersToExcel(orders: Record<string, any>[], filename = "o
     "Order Type": o.order_type || "Retail",
     "Order Name": o.order_name || "",
     "Order Owner": o.dealer_name || "",
+    "Quotation No": o.quote_no || "",
     "SO No": o.sales_order_no || "",
     "Colour Shade": o.colour_shade || "",
     "Salesperson": o.salesperson || "",

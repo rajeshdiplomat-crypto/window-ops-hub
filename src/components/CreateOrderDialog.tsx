@@ -114,7 +114,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       order_type: orderType,
       order_name: orderName.trim(),
       dealer_name: orderOwner,
-      sales_order_no: soNo.trim() || null,
+      quote_no: soNo.trim() || null,
       colour_shade: colourShade || null,
       salesperson: salesperson || null,
       product_type: productType,
