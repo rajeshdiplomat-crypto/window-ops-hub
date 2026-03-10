@@ -145,6 +145,14 @@ export const DEPARTMENTS: DepartmentConfig[] = [
       (o.dispatch_status === "Partially Dispatched" || o.dispatch_status === "Fully Dispatched") &&
       o.installation_status !== "Completed",
   },
+  {
+    key: "rework",
+    label: "Rework",
+    description: "Orders requiring rework after installation or QC issues",
+    role: "production",
+    statusField: "installation_status",
+    filter: (o) => o.installation_status === "Completed" && o.dispatch_status === "Fully Dispatched",
+  },
 ];
 
 interface DepartmentQueuePageProps {
