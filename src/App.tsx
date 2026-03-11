@@ -12,6 +12,8 @@ import OrderDetailPage from "@/pages/OrderDetailPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
 import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
 import FinancePage from "@/pages/FinancePage";
+import SurveyPage from "@/pages/SurveyPage";
+import DesignPage from "@/pages/DesignPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import UserManagementPage from "@/pages/UserManagementPage";
