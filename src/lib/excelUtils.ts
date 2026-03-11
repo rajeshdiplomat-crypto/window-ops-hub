@@ -63,12 +63,6 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    // Rework validation
-    if (record.rework_qty && record.rework_qty > 0 && !record.rework_issue) {
-      result.errors.push(`Row ${i + 2}: Rework Issue required when Rework Qty > 0`);
-      continue;
-    }
-
     if (!record.order_name && !record.quote_no) {
       result.errors.push(`Row ${i + 2}: Missing Order Name and Quotation No`);
       continue;
