@@ -351,6 +351,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           dealer_name: string
+          design_released_windows: number
+          design_remarks: string | null
           design_status: string
           dispatch_status: string
           finance_remarks: string | null
@@ -368,6 +370,8 @@ export type Database = {
           sales_order_no: string | null
           salesperson: string | null
           sqft: number
+          survey_done_windows: number
+          survey_remarks: string | null
           survey_status: string
           total_windows: number
           updated_at: string | null
@@ -384,6 +388,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dealer_name?: string
+          design_released_windows?: number
+          design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
           finance_remarks?: string | null
@@ -401,6 +407,8 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          survey_done_windows?: number
+          survey_remarks?: string | null
           survey_status?: string
           total_windows?: number
           updated_at?: string | null
@@ -417,6 +425,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dealer_name?: string
+          design_released_windows?: number
+          design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
           finance_remarks?: string | null
@@ -434,6 +444,8 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          survey_done_windows?: number
+          survey_remarks?: string | null
           survey_status?: string
           total_windows?: number
           updated_at?: string | null
