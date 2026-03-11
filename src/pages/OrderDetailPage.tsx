@@ -19,6 +19,8 @@ import ReworkSection from "@/components/ReworkSection";
 import FinanceSection from "@/components/FinanceSection";
 import SurveySection from "@/components/SurveySection";
 import DesignSection from "@/components/DesignSection";
+import StoreSection from "@/components/StoreSection";
+import ProcurementSection from "@/components/ProcurementSection";
 import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
