@@ -17,6 +17,8 @@ import { triggerStatusNotification } from "@/lib/notifications";
 import { checkMaterialDependency } from "@/lib/nextActions";
 import ReworkSection from "@/components/ReworkSection";
 import FinanceSection from "@/components/FinanceSection";
+import SurveySection from "@/components/SurveySection";
+import DesignSection from "@/components/DesignSection";
 import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
@@ -219,10 +221,12 @@ export default function OrderDetailPage() {
       </div>
 
       <Tabs defaultValue="statuses">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="survey">Survey</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
@@ -275,8 +279,16 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="survey" className="mt-4">
+          <SurveySection orderId={id!} order={order} onRefresh={fetchAll} />
+        </TabsContent>
+
         <TabsContent value="finance" className="mt-4">
           <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} />
+        </TabsContent>
+
+        <TabsContent value="design" className="mt-4">
+          <DesignSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4">

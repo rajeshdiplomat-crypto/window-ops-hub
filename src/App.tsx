@@ -12,6 +12,8 @@ import OrderDetailPage from "@/pages/OrderDetailPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
 import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
 import FinancePage from "@/pages/FinancePage";
+import SurveyPage from "@/pages/SurveyPage";
+import DesignPage from "@/pages/DesignPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import UserManagementPage from "@/pages/UserManagementPage";
@@ -31,9 +33,9 @@ function ProtectedRoutes() {
         <Route path="/orders" element={<DepartmentQueuePage departmentKey="orders" />} />
         <Route path="/sales" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/survey" element={<DepartmentQueuePage departmentKey="survey" />} />
+        <Route path="/survey" element={<SurveyPage />} />
         <Route path="/finance" element={<FinancePage />} />
-        <Route path="/design" element={<DepartmentQueuePage departmentKey="design" />} />
+        <Route path="/design" element={<DesignPage />} />
         <Route path="/procurement" element={<DepartmentQueuePage departmentKey="procurement" />} />
         <Route path="/production" element={<ProductionDashboard />} />
         <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
