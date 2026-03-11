@@ -13,7 +13,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, Pencil } from "lucide-react";
+import { UserPlus, Pencil, Send, Ban } from "lucide-react";
+import { format } from "date-fns";
 
 const ALL_ROLES = [
   "sales", "finance", "survey", "design", "procurement",
@@ -27,6 +28,9 @@ interface Profile {
   name: string;
   email: string;
   active: boolean;
+  status: string;
+  invited_at: string | null;
+  joined_at: string | null;
   created_at: string;
 }
 
@@ -46,7 +50,6 @@ export default function UserManagementPage() {
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Form state
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formRoles, setFormRoles] = useState<string[]>([]);
@@ -113,13 +116,11 @@ export default function UserManagementPage() {
     } else if (modalMode === "edit" && editUserId) {
       setSaving(true);
       try {
-        // Update active status
         await supabase
           .from("profiles")
-          .update({ active: formActive, name: formName.trim() })
+          .update({ active: formActive, name: formName.trim(), status: formActive ? "active" : "disabled" })
           .eq("user_id", editUserId);
 
-        // Sync roles
         await supabase.from("user_roles").delete().eq("user_id", editUserId);
         if (formRoles.length > 0) {
           await supabase.from("user_roles").insert(
@@ -139,14 +140,53 @@ export default function UserManagementPage() {
     fetchData();
   };
 
+  const handleResendInvite = async (profile: Profile) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: profile.email, action: "resend_invite" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Invite resent successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to resend invite");
+    }
+  };
+
+  const handleDisableUser = async (profile: Profile) => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({ active: false, status: "disabled" })
+        .eq("user_id", profile.user_id);
+      toast.success("User disabled");
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to disable user");
+    }
+  };
+
   const getStatusBadge = (profile: Profile) => {
-    if (!profile.active) {
-      return <Badge variant="secondary" className="bg-muted text-muted-foreground">Disabled</Badge>;
+    const status = profile.status || (profile.active ? "active" : "disabled");
+    switch (status) {
+      case "invited":
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Invited</Badge>;
+      case "active":
+        return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</Badge>;
+      case "disabled":
+        return <Badge variant="secondary" className="bg-muted text-muted-foreground">Disabled</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
     }
-    if (!profile.name && profile.active) {
-      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Invited</Badge>;
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "—";
+    try {
+      return format(new Date(dateStr), "dd MMM yyyy");
+    } catch {
+      return "—";
     }
-    return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</Badge>;
   };
 
   return (
@@ -158,7 +198,7 @@ export default function UserManagementPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -166,20 +206,21 @@ export default function UserManagementPage() {
               <TableHead>Email</TableHead>
               <TableHead>Roles</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Active</TableHead>
+              <TableHead>Invited At</TableHead>
+              <TableHead>Joined At</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : profiles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -200,20 +241,27 @@ export default function UserManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell>{getStatusBadge(p)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDate(p.invited_at)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDate(p.joined_at)}</TableCell>
                   <TableCell>
-                    <Switch
-                      checked={p.active}
-                      onCheckedChange={async () => {
-                        await supabase.from("profiles").update({ active: !p.active }).eq("id", p.id);
-                        fetchData();
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => openEditModal(p)}>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />
-                      Edit
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => openEditModal(p)}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                        Edit
+                      </Button>
+                      {p.status === "invited" && (
+                        <Button variant="outline" size="sm" onClick={() => handleResendInvite(p)}>
+                          <Send className="h-3.5 w-3.5 mr-1" />
+                          Resend
+                        </Button>
+                      )}
+                      {p.status !== "disabled" && (
+                        <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDisableUser(p)}>
+                          <Ban className="h-3.5 w-3.5 mr-1" />
+                          Disable
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -222,7 +270,6 @@ export default function UserManagementPage() {
         </Table>
       </div>
 
-      {/* Add / Edit User Modal */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => !open && setModalMode(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

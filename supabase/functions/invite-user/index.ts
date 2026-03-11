@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the caller is authenticated and is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -24,7 +23,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller is admin using their JWT
     const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -36,7 +34,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: adminCheck } = await adminClient
       .from("user_roles")
@@ -52,7 +49,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, name, roles } = await req.json();
+    const { email, name, roles, action } = await req.json();
+
+    // Handle resend invite
+    if (action === "resend_invite") {
+      if (!email) {
+        return new Response(JSON.stringify({ error: "Email is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      await adminClient.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: {
+          redirectTo: `${req.headers.get("origin") || supabaseUrl}/login`,
+        },
+      });
+      return new Response(
+        JSON.stringify({ success: true, message: "Invite resent successfully." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!email) {
       return new Response(JSON.stringify({ error: "Email is required" }), {
@@ -72,8 +90,6 @@ Deno.serve(async (req) => {
 
     if (existingUser) {
       userId = existingUser.id;
-
-      // Update profile name if provided
       if (name) {
         await adminClient
           .from("profiles")
@@ -81,7 +97,6 @@ Deno.serve(async (req) => {
           .eq("user_id", userId);
       }
     } else {
-      // Create new user with a temporary password — they must reset it
       const tempPassword = crypto.randomUUID() + "Aa1!";
       const { data: newUser, error: createError } =
         await adminClient.auth.admin.createUser({
@@ -101,7 +116,7 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
       isNewUser = true;
 
-      // Ensure profile exists
+      // Ensure profile exists with invited status
       const { data: profileExists } = await adminClient
         .from("profiles")
         .select("id")
@@ -113,11 +128,17 @@ Deno.serve(async (req) => {
           user_id: userId,
           name: name || "",
           email,
+          status: "invited",
+          invited_at: new Date().toISOString(),
         });
+      } else {
+        await adminClient.from("profiles")
+          .update({ status: "invited", invited_at: new Date().toISOString() })
+          .eq("user_id", userId);
       }
     }
 
-    // Sync roles: remove old, add new
+    // Sync roles
     if (roles && Array.isArray(roles)) {
       await adminClient.from("user_roles").delete().eq("user_id", userId);
       if (roles.length > 0) {
@@ -127,7 +148,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send password reset email for new users so they can set their password
+    // Send password reset email for new users
     if (isNewUser) {
       await adminClient.auth.admin.generateLink({
         type: "recovery",
