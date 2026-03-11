@@ -225,6 +225,7 @@ export default function OrderDetailPage() {
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
           <TabsTrigger value="installation">Installation</TabsTrigger>
+          <TabsTrigger value="rework">Rework</TabsTrigger>
         </TabsList>
 
         <TabsContent value="statuses" className="mt-4">
