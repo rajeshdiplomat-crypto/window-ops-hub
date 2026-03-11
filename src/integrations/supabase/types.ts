@@ -299,6 +299,47 @@ export type Database = {
         }
         Relationships: []
       }
+      order_activity_log: {
+        Row: {
+          field_name: string
+          id: string
+          module: string
+          new_value: string | null
+          old_value: string | null
+          order_id: string
+          timestamp: string
+          updated_by: string | null
+        }
+        Insert: {
+          field_name: string
+          id?: string
+          module: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id: string
+          timestamp?: string
+          updated_by?: string | null
+        }
+        Update: {
+          field_name?: string
+          id?: string
+          module?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id?: string
+          timestamp?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_activity_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           advance_received: number
@@ -306,6 +347,7 @@ export type Database = {
           colour_shade: string | null
           commercial_status: string
           created_at: string
+          created_by: string | null
           dealer_name: string
           design_status: string
           dispatch_status: string
@@ -325,6 +367,8 @@ export type Database = {
           sqft: number
           survey_status: string
           total_windows: number
+          updated_at: string | null
+          updated_by: string | null
           windows_released: number
         }
         Insert: {
@@ -333,6 +377,7 @@ export type Database = {
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
+          created_by?: string | null
           dealer_name?: string
           design_status?: string
           dispatch_status?: string
@@ -352,6 +397,8 @@ export type Database = {
           sqft?: number
           survey_status?: string
           total_windows?: number
+          updated_at?: string | null
+          updated_by?: string | null
           windows_released?: number
         }
         Update: {
@@ -360,6 +407,7 @@ export type Database = {
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
+          created_by?: string | null
           dealer_name?: string
           design_status?: string
           dispatch_status?: string
@@ -379,6 +427,8 @@ export type Database = {
           sqft?: number
           survey_status?: string
           total_windows?: number
+          updated_at?: string | null
+          updated_by?: string | null
           windows_released?: number
         }
         Relationships: []
@@ -534,6 +584,47 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      rework_logs: {
+        Row: {
+          id: string
+          order_id: string
+          reported_at: string
+          reported_by: string | null
+          resolved: boolean
+          resolved_at: string | null
+          rework_issue: string
+          rework_qty: number
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          reported_at?: string
+          reported_by?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          rework_issue: string
+          rework_qty?: number
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          reported_at?: string
+          reported_by?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          rework_issue?: string
+          rework_qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rework_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salespersons: {
         Row: {
