@@ -94,17 +94,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
           <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
         </div>
-        <nav className="flex-1 overflow-auto p-2 space-y-3">
-          {navSections.map((section) => (
-            <div key={section.label}>
-              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                {section.label}
-              </p>
-              <div className="space-y-0.5">
-                {section.items.map((item) => renderLink(item.path, item.label, item.icon))}
+        <nav className="flex-1 overflow-auto p-2 space-y-0.5">
+          {navItems.map((item, i) => {
+            const prevGroup = i > 0 ? navItems[i - 1].group : item.group;
+            return (
+              <div key={item.path}>
+                {i > 0 && item.group !== prevGroup && (
+                  <Separator className="my-1.5 bg-sidebar-border" />
+                )}
+                {renderLink(item.path, item.label, item.icon)}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
       </aside>
 
