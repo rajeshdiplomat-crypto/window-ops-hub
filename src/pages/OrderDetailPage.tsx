@@ -279,8 +279,16 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="survey" className="mt-4">
+          <SurveySection orderId={id!} order={order} onRefresh={fetchAll} />
+        </TabsContent>
+
         <TabsContent value="finance" className="mt-4">
           <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} />
+        </TabsContent>
+
+        <TabsContent value="design" className="mt-4">
+          <DesignSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4">
