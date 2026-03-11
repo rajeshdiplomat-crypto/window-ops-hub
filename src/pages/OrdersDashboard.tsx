@@ -27,6 +27,12 @@ interface ReworkSummary {
   latest_issue: string | null;
 }
 
+interface PaymentLog {
+  order_id: string;
+  amount: number;
+  status: string;
+}
+
 interface Order {
   id: string;
   order_type: string;
