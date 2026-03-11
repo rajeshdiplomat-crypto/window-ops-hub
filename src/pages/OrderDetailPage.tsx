@@ -275,6 +275,10 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="finance" className="mt-4">
+          <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} />
+        </TabsContent>
+
         <TabsContent value="materials" className="mt-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
