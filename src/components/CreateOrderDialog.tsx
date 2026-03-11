@@ -64,7 +64,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       setProjectClients((pc.data as SettingsItem[]) || []);
       setColourShades((cs.data as SettingsItem[]) || []);
       setSalespersons((sp.data as SettingsItem[]) || []);
-      setOtherProductTypes((opt.data as SettingsItem[]) || []);
+      setProducts((opt.data as SettingsItem[]) || []);
     };
     fetchAll();
   }, [open]);
