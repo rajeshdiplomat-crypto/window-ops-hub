@@ -22,8 +22,7 @@ const IMPORT_HEADERS = Object.keys(FIELD_MAP);
 const EXPORT_HEADERS = [
   "Order Type", "Order Name", "Commercial Status", "Order Owner", "Quotation No", "SO No",
   "Colour Shade", "Salesperson", "Product Type", "No of Windows", "Avl to Work",
-  "Sqft", "Order Value", "Receipt", "Balance",
-  "Rework Qty", "Rework Issue",
+  "Sqft", "Order Value", "Receipt", "Balance", "Dispatch Status",
 ];
 
 interface ImportResult {
