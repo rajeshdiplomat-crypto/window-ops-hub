@@ -464,6 +464,9 @@ export default function OrderDetailPage() {
             )}
           </Card>
         </TabsContent>
+        <TabsContent value="rework" className="mt-4">
+          <ReworkSection orderId={id!} />
+        </TabsContent>
       </Tabs>
     </div>
   );
