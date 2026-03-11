@@ -38,8 +38,7 @@ function ProtectedRoutes() {
     <AppLayout>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/orders" element={<DepartmentQueuePage departmentKey="orders" />} />
-        <Route path="/sales" element={<OrdersDashboard />} />
+        <Route path="/orders" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/survey" element={<SurveyPage />} />
         <Route path="/finance" element={<FinancePage />} />
