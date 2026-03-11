@@ -13,7 +13,7 @@ import ProductionDashboard from "@/pages/ProductionDashboard";
 import DispatchPage from "@/pages/DispatchPage";
 import InstallationPage from "@/pages/InstallationPage";
 import ReworkPage from "@/pages/ReworkPage";
-import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
+import SalesPage from "@/pages/SalesPage";
 import FinancePage from "@/pages/FinancePage";
 import SurveyPage from "@/pages/SurveyPage";
 import DesignPage from "@/pages/DesignPage";
