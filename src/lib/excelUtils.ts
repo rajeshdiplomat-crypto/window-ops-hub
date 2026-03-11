@@ -15,8 +15,6 @@ const FIELD_MAP: Record<string, string> = {
   "Order Value": "order_value",
   "Receipt": "advance_received",
   "Commercial Status": "commercial_status",
-  "Rework Qty": "rework_qty",
-  "Rework Issue": "rework_issue",
 };
 
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
