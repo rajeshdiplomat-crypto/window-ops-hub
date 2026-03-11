@@ -7,16 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-interface SettingsItem {
-  id: string;
-  name: string;
-  active: boolean;
-}
+interface SettingsItem { id: string; name: string; active: boolean; }
 
 interface EditOrderDialogProps {
   open: boolean;
@@ -38,6 +35,9 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
   const [orderValue, setOrderValue] = useState("");
   const [advanceReceived, setAdvanceReceived] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [commercialStatus, setCommercialStatus] = useState("");
+  const [reworkQty, setReworkQty] = useState("");
+  const [reworkIssue, setReworkIssue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [projectNames, setProjectNames] = useState<SettingsItem[]>([]);
@@ -46,6 +46,7 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
   const [colourShades, setColourShades] = useState<SettingsItem[]>([]);
   const [salespersons, setSalespersons] = useState<SettingsItem[]>([]);
   const [products, setProducts] = useState<SettingsItem[]>([]);
+  const [commercialStatuses, setCommercialStatuses] = useState<SettingsItem[]>([]);
 
   useEffect(() => {
     if (!open || !order) return;
@@ -62,15 +63,19 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
     const adv = Number(order.advance_received) || 0;
     setAdvanceReceived(adv > 0);
     setAdvanceAmount(adv > 0 ? String(adv) : "");
+    setCommercialStatus(order.commercial_status || "");
+    setReworkQty(String(order.rework_qty || 0));
+    setReworkIssue(order.rework_issue || "");
 
     const fetchAll = async () => {
-      const [pn, dl, pc, cs, sp, opt] = await Promise.all([
+      const [pn, dl, pc, cs, sp, opt, cst] = await Promise.all([
         supabase.from("project_names" as any).select("*").eq("active", true).order("name") as any,
         supabase.from("dealers").select("*").eq("active", true).order("name"),
         supabase.from("project_client_names" as any).select("*").eq("active", true).order("name") as any,
         supabase.from("colour_shades").select("*").eq("active", true).order("name"),
         supabase.from("salespersons").select("*").eq("active", true).order("name"),
         supabase.from("other_product_types" as any).select("*").eq("active", true).order("name") as any,
+        supabase.from("commercial_statuses" as any).select("*").eq("active", true).order("name") as any,
       ]);
       setProjectNames((pn.data as SettingsItem[]) || []);
       setDealers((dl.data as SettingsItem[]) || []);
@@ -78,6 +83,7 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
       setColourShades((cs.data as SettingsItem[]) || []);
       setSalespersons((sp.data as SettingsItem[]) || []);
       setProducts((opt.data as SettingsItem[]) || []);
+      setCommercialStatuses((cst.data as SettingsItem[]) || []);
     };
     fetchAll();
   }, [open, order]);
@@ -92,14 +98,12 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
     if (!orderName.trim()) return toast.error("Order Name is required");
     if (selectedProducts.length === 0) return toast.error("Select at least one product");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
+    const rq = Number(reworkQty) || 0;
+    if (rq > 0 && !reworkIssue.trim()) return toast.error("Rework Issue is required when Rework Qty > 0");
 
     if (quoteNo.trim()) {
       const { data: existing } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("quote_no", quoteNo.trim())
-        .neq("id", order.id)
-        .maybeSingle();
+        .from("orders").select("id").eq("quote_no", quoteNo.trim()).neq("id", order.id).maybeSingle();
       if (existing) return toast.error("Quotation Number already exists");
     }
 
@@ -116,6 +120,9 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
       sqft: Number(sqft) || 0,
       order_value: Number(orderValue) || 0,
       advance_received: advanceReceived ? Number(advanceAmount) || 0 : 0,
+      commercial_status: commercialStatus || "Pipeline",
+      rework_qty: rq,
+      rework_issue: rq > 0 ? reworkIssue.trim() : null,
     };
 
     const { error } = await supabase.from("orders").update(payload).eq("id", order.id);
@@ -201,6 +208,16 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">Commercial Status</Label>
+                <Select value={commercialStatus} onValueChange={setCommercialStatus}>
+                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                  <SelectContent>
+                    {commercialStatuses.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -223,7 +240,7 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm">Qty</Label>
+                <Label className="text-sm">Qty (No of Windows)</Label>
                 <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" min="0" />
               </div>
 
@@ -244,8 +261,23 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
                 </label>
                 {advanceReceived && (
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Advance Amount (₹)</Label>
+                    <Label className="text-sm">Receipt Amount (₹)</Label>
                     <Input type="number" step="0.01" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} placeholder="0" max={orderValue || undefined} />
+                  </div>
+                )}
+              </div>
+
+              {/* Rework Section */}
+              <div className="border-t pt-3 space-y-3">
+                <Label className="text-sm font-medium">Rework</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Rework Qty</Label>
+                  <Input type="number" value={reworkQty} onChange={(e) => setReworkQty(e.target.value)} placeholder="0" min="0" />
+                </div>
+                {Number(reworkQty) > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Rework Issue *</Label>
+                    <Textarea value={reworkIssue} onChange={(e) => setReworkIssue(e.target.value)} placeholder="Describe the rework issue..." rows={2} />
                   </div>
                 )}
               </div>

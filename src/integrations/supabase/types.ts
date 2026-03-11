@@ -110,6 +110,27 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_statuses: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       dealers: {
         Row: {
           active: boolean
@@ -297,6 +318,8 @@ export type Database = {
           other_product_type: string | null
           product_type: string
           quote_no: string | null
+          rework_issue: string | null
+          rework_qty: number
           sales_order_no: string | null
           salesperson: string | null
           sqft: number
@@ -322,6 +345,8 @@ export type Database = {
           other_product_type?: string | null
           product_type?: string
           quote_no?: string | null
+          rework_issue?: string | null
+          rework_qty?: number
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
@@ -347,6 +372,8 @@ export type Database = {
           other_product_type?: string | null
           product_type?: string
           quote_no?: string | null
+          rework_issue?: string | null
+          rework_qty?: number
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number

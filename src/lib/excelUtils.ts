@@ -10,20 +10,22 @@ const FIELD_MAP: Record<string, string> = {
   "Colour Shade": "colour_shade",
   "Salesperson": "salesperson",
   "Product Type": "product_type",
-  "Qty": "total_windows",
+  "No of Windows": "total_windows",
   "Sqft": "sqft",
   "Order Value": "order_value",
-  "Advance Received": "advance_received_flag",
-  "Advance Amount": "advance_received",
+  "Receipt": "advance_received",
+  "Commercial Status": "commercial_status",
+  "Rework Qty": "rework_qty",
+  "Rework Issue": "rework_issue",
 };
 
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
 
 const EXPORT_HEADERS = [
-  "Order Type", "Order Name", "Order Owner", "Quotation No", "SO No", "Colour Shade",
-  "Salesperson", "Product Type", "No of Windows", "Sqft", "Order Value",
-  "Advance Amount", "Balance Amount", "Commercial Status", "Survey Status",
-  "Design Status", "Dispatch Status", "Installation Status",
+  "Order Type", "Order Name", "Commercial Status", "Order Owner", "Quotation No", "SO No",
+  "Colour Shade", "Salesperson", "Product Type", "No of Windows", "Avl to Work",
+  "Sqft", "Order Value", "Receipt", "Balance",
+  "Rework Qty", "Rework Issue",
 ];
 
 interface ImportResult {
@@ -32,9 +34,6 @@ interface ImportResult {
   errors: string[];
 }
 
-/**
- * Parse an Excel file and upsert orders.
- */
 export async function importOrdersFromFile(file: File): Promise<ImportResult> {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: "array" });
@@ -50,8 +49,7 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
     for (const [excelHeader, dbField] of Object.entries(FIELD_MAP)) {
       const val = row[excelHeader];
       if (val !== undefined && val !== null && val !== "") {
-        if (dbField === "advance_received_flag") continue; // handled separately
-        if (["total_windows"].includes(dbField)) {
+        if (["total_windows", "rework_qty"].includes(dbField)) {
           record[dbField] = Math.round(Number(val) || 0);
         } else if (["sqft", "order_value", "advance_received"].includes(dbField)) {
           record[dbField] = Number(val) || 0;
@@ -61,18 +59,15 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       }
     }
 
-    // Handle advance received flag
-    const advFlag = String(row["Advance Received"] || "").toLowerCase().trim();
-    if (advFlag === "yes" || advFlag === "true" || advFlag === "1") {
-      if (!record.advance_received || record.advance_received <= 0) {
-        result.errors.push(`Row ${i + 2}: Advance Received = Yes but no Advance Amount`);
-        continue;
-      }
-    }
-
     // Validate advance doesn't exceed order value
     if (record.advance_received && record.order_value && record.advance_received > record.order_value) {
-      result.errors.push(`Row ${i + 2}: Advance Amount exceeds Order Value`);
+      result.errors.push(`Row ${i + 2}: Receipt exceeds Order Value`);
+      continue;
+    }
+
+    // Rework validation
+    if (record.rework_qty && record.rework_qty > 0 && !record.rework_issue) {
+      result.errors.push(`Row ${i + 2}: Rework Issue required when Rework Qty > 0`);
       continue;
     }
 
@@ -81,7 +76,6 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    // Product type is now a comma-separated list of products
     if (!record.product_type) {
       result.errors.push(`Row ${i + 2}: Product Type is required`);
       continue;
@@ -113,6 +107,7 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
     }
     if (!record.dealer_name) record.dealer_name = "";
     if (!record.order_type) record.order_type = "Retail";
+    if (!record.commercial_status) record.commercial_status = "Pipeline";
 
     const { error } = await supabase.from("orders").insert(record);
     if (error) result.errors.push(`Row ${i + 2}: ${error.message}`);
@@ -127,22 +122,21 @@ export function exportOrdersToExcel(orders: Record<string, any>[], filename = "o
   const exportRows = orders.map((o) => ({
     "Order Type": o.order_type || "Retail",
     "Order Name": o.order_name || "",
+    "Commercial Status": o.commercial_status || "",
     "Order Owner": o.dealer_name || "",
     "Quotation No": o.quote_no || "",
     "SO No": o.sales_order_no || "",
     "Colour Shade": o.colour_shade || "",
     "Salesperson": o.salesperson || "",
-    "Product Type": o.product_type || "Windows",
+    "Product Type": o.product_type || "",
     "No of Windows": o.total_windows || 0,
+    "Avl to Work": o.windows_released || 0,
     "Sqft": o.sqft || 0,
     "Order Value": o.order_value || 0,
-    "Advance Amount": o.advance_received || 0,
-    "Balance Amount": o.balance_amount || 0,
-    "Commercial Status": o.commercial_status || "",
-    "Survey Status": o.survey_status || "",
-    "Design Status": o.design_status || "",
-    "Dispatch Status": o.dispatch_status || "",
-    "Installation Status": o.installation_status || "",
+    "Receipt": o.advance_received || 0,
+    "Balance": o.balance_amount || 0,
+    "Rework Qty": o.rework_qty || 0,
+    "Rework Issue": o.rework_issue || "",
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportRows, { header: EXPORT_HEADERS });
