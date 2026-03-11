@@ -466,30 +466,42 @@ export type Database = {
       payment_logs: {
         Row: {
           amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           entered_by: string | null
           id: string
           order_id: string
           payment_date: string | null
           payment_mode: string | null
+          source_module: string
+          status: string
         }
         Insert: {
           amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           entered_by?: string | null
           id?: string
           order_id: string
           payment_date?: string | null
           payment_mode?: string | null
+          source_module?: string
+          status?: string
         }
         Update: {
           amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           entered_by?: string | null
           id?: string
           order_id?: string
           payment_date?: string | null
           payment_mode?: string | null
+          source_module?: string
+          status?: string
         }
         Relationships: [
           {
