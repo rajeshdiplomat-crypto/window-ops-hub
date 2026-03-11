@@ -15,8 +15,6 @@ const FIELD_MAP: Record<string, string> = {
   "Order Value": "order_value",
   "Receipt": "advance_received",
   "Commercial Status": "commercial_status",
-  "Rework Qty": "rework_qty",
-  "Rework Issue": "rework_issue",
 };
 
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
@@ -24,8 +22,7 @@ const IMPORT_HEADERS = Object.keys(FIELD_MAP);
 const EXPORT_HEADERS = [
   "Order Type", "Order Name", "Commercial Status", "Order Owner", "Quotation No", "SO No",
   "Colour Shade", "Salesperson", "Product Type", "No of Windows", "Avl to Work",
-  "Sqft", "Order Value", "Receipt", "Balance",
-  "Rework Qty", "Rework Issue",
+  "Sqft", "Order Value", "Receipt", "Balance", "Dispatch Status",
 ];
 
 interface ImportResult {
@@ -62,12 +59,6 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
     // Validate advance doesn't exceed order value
     if (record.advance_received && record.order_value && record.advance_received > record.order_value) {
       result.errors.push(`Row ${i + 2}: Receipt exceeds Order Value`);
-      continue;
-    }
-
-    // Rework validation
-    if (record.rework_qty && record.rework_qty > 0 && !record.rework_issue) {
-      result.errors.push(`Row ${i + 2}: Rework Issue required when Rework Qty > 0`);
       continue;
     }
 
@@ -135,8 +126,7 @@ export function exportOrdersToExcel(orders: Record<string, any>[], filename = "o
     "Order Value": o.order_value || 0,
     "Receipt": o.advance_received || 0,
     "Balance": o.balance_amount || 0,
-    "Rework Qty": o.rework_qty || 0,
-    "Rework Issue": o.rework_issue || "",
+    "Dispatch Status": o.dispatch_status || "Not Dispatched",
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportRows, { header: EXPORT_HEADERS });

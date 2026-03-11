@@ -21,6 +21,12 @@ import CreateOrderDialog from "@/components/CreateOrderDialog";
 import EditOrderDialog from "@/components/EditOrderDialog";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
+interface ReworkSummary {
+  order_id: string;
+  total_qty: number;
+  latest_issue: string | null;
+}
+
 interface Order {
   id: string;
   order_type: string;
@@ -39,8 +45,6 @@ interface Order {
   balance_amount: number;
   commercial_status: string;
   dispatch_status: string;
-  rework_qty: number;
-  rework_issue: string | null;
   created_at: string;
 }
 
@@ -51,6 +55,12 @@ const statusColor = (status: string) => {
   if (s === "hold") return "bg-warning/15 text-warning border-warning/20";
   if (s === "cancelled") return "bg-destructive/15 text-destructive border-destructive/20";
   if (s === "pending") return "bg-warning/15 text-warning border-warning/20";
+  return "bg-muted text-muted-foreground";
+};
+
+const dispatchColor = (status: string) => {
+  if (status === "Fully Dispatched") return "bg-success/15 text-success border-success/20";
+  if (status === "Partially Dispatched") return "bg-blue-500/15 text-blue-600 border-blue-500/20";
   return "bg-muted text-muted-foreground";
 };
 
@@ -69,6 +79,7 @@ const emptyFilters: Filters = {
 
 export default function OrdersDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [reworkMap, setReworkMap] = useState<Record<string, ReworkSummary>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -79,7 +90,6 @@ export default function OrdersDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { hasRole } = useUserRoles();
 
-  // Settings for filter dropdowns
   const [salespersons, setSalespersons] = useState<string[]>([]);
   const [owners, setOwners] = useState<string[]>([]);
   const [shades, setShades] = useState<string[]>([]);
@@ -88,9 +98,23 @@ export default function OrdersDashboard() {
   const canEdit = hasRole("sales") || hasRole("admin") || hasRole("management");
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-    if (error) toast.error("Failed to load orders");
-    else setOrders((data as unknown as Order[]) || []);
+    const [ordersRes, reworkRes] = await Promise.all([
+      supabase.from("orders").select("*").order("created_at", { ascending: false }),
+      (supabase.from("rework_logs" as any) as any).select("order_id, rework_qty, rework_issue, reported_at").order("reported_at", { ascending: false }),
+    ]);
+    if (ordersRes.error) toast.error("Failed to load orders");
+    else setOrders((ordersRes.data as unknown as Order[]) || []);
+
+    // Build rework summary map
+    const logs = (reworkRes.data || []) as { order_id: string; rework_qty: number; rework_issue: string; reported_at: string }[];
+    const map: Record<string, ReworkSummary> = {};
+    for (const log of logs) {
+      if (!map[log.order_id]) {
+        map[log.order_id] = { order_id: log.order_id, total_qty: 0, latest_issue: log.rework_issue };
+      }
+      map[log.order_id].total_qty += log.rework_qty;
+    }
+    setReworkMap(map);
     setLoading(false);
   };
 
@@ -103,7 +127,6 @@ export default function OrdersDashboard() {
     setSalespersons((sp.data || []).map((d: any) => d.name));
     setCommercialStatuses((cs.data || []).map((d: any) => d.name));
     setShades((clr.data || []).map((d: any) => d.name));
-    // Extract unique owners from orders
     const uniqueOwners = [...new Set(orders.map((o) => o.dealer_name).filter(Boolean))].sort();
     setOwners(uniqueOwners);
   };
@@ -111,14 +134,12 @@ export default function OrdersDashboard() {
   useEffect(() => { fetchOrders(); }, []);
   useEffect(() => { if (orders.length > 0) fetchFilterOptions(); }, [orders.length]);
 
-  // Tab filtering
   const tabFiltered = orders.filter((o) => {
     if (tab === "open") return o.dispatch_status !== "Fully Dispatched";
     if (tab === "dispatched") return o.dispatch_status === "Fully Dispatched";
     return true;
   });
 
-  // Search + filters
   const filtered = tabFiltered.filter((o) => {
     if (search) {
       const s = search.toLowerCase();
@@ -132,8 +153,9 @@ export default function OrdersDashboard() {
     if (filters.orderType && o.order_type !== filters.orderType) return false;
     if (filters.colourShade && o.colour_shade !== filters.colourShade) return false;
     if (filters.commercialStatus && o.commercial_status !== filters.commercialStatus) return false;
-    if (filters.hasRework === "yes" && o.rework_qty <= 0) return false;
-    if (filters.hasRework === "no" && o.rework_qty > 0) return false;
+    const rework = reworkMap[o.id];
+    if (filters.hasRework === "yes" && (!rework || rework.total_qty <= 0)) return false;
+    if (filters.hasRework === "no" && rework && rework.total_qty > 0) return false;
     return true;
   });
 
@@ -182,7 +204,6 @@ export default function OrdersDashboard() {
         </div>
       </div>
 
-      {/* Search + Filters */}
       <div className="mb-4 flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -219,7 +240,6 @@ export default function OrdersDashboard() {
         </Popover>
       </div>
 
-      {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList>
           <TabsTrigger value="open">Open Orders</TabsTrigger>
@@ -228,14 +248,12 @@ export default function OrdersDashboard() {
         </TabsList>
       </Tabs>
 
-      {/* Table */}
       <div className="rounded-md border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[80px]">Type</TableHead>
               <TableHead className="min-w-[140px]">Order Name</TableHead>
-              <TableHead className="min-w-[100px]">Commercial</TableHead>
               <TableHead className="min-w-[120px]">Owner</TableHead>
               <TableHead className="min-w-[100px]">Quotation No</TableHead>
               <TableHead className="min-w-[80px]">SO No</TableHead>
@@ -248,51 +266,57 @@ export default function OrdersDashboard() {
               <TableHead className="text-right min-w-[90px]">Order Value</TableHead>
               <TableHead className="text-right min-w-[80px]">Receipt</TableHead>
               <TableHead className="text-right min-w-[80px]">Balance</TableHead>
-              <TableHead className="text-right min-w-[70px]">Rework Qty</TableHead>
-              <TableHead className="min-w-[120px]">Rework Issue</TableHead>
+              <TableHead className="text-right min-w-[70px]">Rework Total</TableHead>
+              <TableHead className="min-w-[120px]">Latest Issue</TableHead>
+              <TableHead className="min-w-[120px]">Dispatch Status</TableHead>
+              <TableHead className="min-w-[100px]">Commercial</TableHead>
               {canEdit && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 18 : 17} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={canEdit ? 19 : 18} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 18 : 17} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
+                <TableCell colSpan={canEdit ? 19 : 18} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
               </TableRow>
             ) : (
-              filtered.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/50">
-                  <TableCell><Badge variant="outline" className="text-xs">{order.order_type}</Badge></TableCell>
-                  <TableCell>
-                    <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">{order.order_name}</Link>
-                  </TableCell>
-                  <TableCell><Badge variant="outline" className={statusColor(order.commercial_status)}>{order.commercial_status}</Badge></TableCell>
-                  <TableCell className="text-sm">{order.dealer_name}</TableCell>
-                  <TableCell className="text-sm">{order.quote_no || "—"}</TableCell>
-                  <TableCell className="text-sm">{order.sales_order_no || "—"}</TableCell>
-                  <TableCell className="text-sm">{order.colour_shade || "—"}</TableCell>
-                  <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
-                  <TableCell className="text-sm max-w-[180px] truncate" title={order.product_type}>{order.product_type}</TableCell>
-                  <TableCell className="text-right">{order.total_windows}</TableCell>
-                  <TableCell className="text-right">{order.windows_released}</TableCell>
-                  <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
-                  <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{Number(order.advance_received).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{Number(order.balance_amount).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">{order.rework_qty > 0 ? order.rework_qty : "—"}</TableCell>
-                  <TableCell className="text-sm max-w-[120px] truncate" title={order.rework_issue || ""}>{order.rework_issue || "—"}</TableCell>
-                  {canEdit && (
+              filtered.map((order) => {
+                const rework = reworkMap[order.id];
+                return (
+                  <TableRow key={order.id} className="hover:bg-muted/50">
+                    <TableCell><Badge variant="outline" className="text-xs">{order.order_type}</Badge></TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditOrder(order); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">{order.order_name}</Link>
                     </TableCell>
-                  )}
-                </TableRow>
-              ))
+                    <TableCell className="text-sm">{order.dealer_name}</TableCell>
+                    <TableCell className="text-sm">{order.quote_no || "—"}</TableCell>
+                    <TableCell className="text-sm">{order.sales_order_no || "—"}</TableCell>
+                    <TableCell className="text-sm">{order.colour_shade || "—"}</TableCell>
+                    <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
+                    <TableCell className="text-sm max-w-[180px] truncate" title={order.product_type}>{order.product_type}</TableCell>
+                    <TableCell className="text-right">{order.total_windows}</TableCell>
+                    <TableCell className="text-right">{order.windows_released}</TableCell>
+                    <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
+                    <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{Number(order.advance_received).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{Number(order.balance_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{rework && rework.total_qty > 0 ? rework.total_qty : "—"}</TableCell>
+                    <TableCell className="text-sm max-w-[120px] truncate" title={rework?.latest_issue || ""}>{rework?.latest_issue || "—"}</TableCell>
+                    <TableCell><Badge variant="outline" className={dispatchColor(order.dispatch_status)}>{order.dispatch_status}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className={statusColor(order.commercial_status)}>{order.commercial_status}</Badge></TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditOrder(order); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLog";
 
 interface SettingsItem { id: string; name: string; active: boolean; }
 
@@ -36,8 +36,6 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
   const [advanceReceived, setAdvanceReceived] = useState(false);
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [commercialStatus, setCommercialStatus] = useState("");
-  const [reworkQty, setReworkQty] = useState("");
-  const [reworkIssue, setReworkIssue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [projectNames, setProjectNames] = useState<SettingsItem[]>([]);
@@ -64,8 +62,6 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
     setAdvanceReceived(adv > 0);
     setAdvanceAmount(adv > 0 ? String(adv) : "");
     setCommercialStatus(order.commercial_status || "");
-    setReworkQty(String(order.rework_qty || 0));
-    setReworkIssue(order.rework_issue || "");
 
     const fetchAll = async () => {
       const [pn, dl, pc, cs, sp, opt, cst] = await Promise.all([
@@ -98,8 +94,6 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
     if (!orderName.trim()) return toast.error("Order Name is required");
     if (selectedProducts.length === 0) return toast.error("Select at least one product");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
-    const rq = Number(reworkQty) || 0;
-    if (rq > 0 && !reworkIssue.trim()) return toast.error("Rework Issue is required when Rework Qty > 0");
 
     if (quoteNo.trim()) {
       const { data: existing } = await supabase
@@ -121,9 +115,13 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
       order_value: Number(orderValue) || 0,
       advance_received: advanceReceived ? Number(advanceAmount) || 0 : 0,
       commercial_status: commercialStatus || "Pipeline",
-      rework_qty: rq,
-      rework_issue: rq > 0 ? reworkIssue.trim() : null,
     };
+
+    // Log changes
+    const changedFields = Object.entries(payload).filter(([key, val]) => {
+      const oldVal = order[key];
+      return String(val ?? "") !== String(oldVal ?? "");
+    });
 
     const { error } = await supabase.from("orders").update(payload).eq("id", order.id);
     setSubmitting(false);
@@ -131,6 +129,16 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
     if (error) {
       toast.error(error.message);
     } else {
+      // Log activity for changed fields
+      for (const [key, val] of changedFields) {
+        await logActivity({
+          orderId: order.id,
+          module: "sales",
+          fieldName: key,
+          oldValue: order[key] != null ? String(order[key]) : null,
+          newValue: val != null ? String(val) : null,
+        });
+      }
       toast.success("Order updated");
       onOpenChange(false);
       onUpdated();
@@ -263,21 +271,6 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
                   <div className="space-y-1.5">
                     <Label className="text-sm">Receipt Amount (₹)</Label>
                     <Input type="number" step="0.01" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} placeholder="0" max={orderValue || undefined} />
-                  </div>
-                )}
-              </div>
-
-              {/* Rework Section */}
-              <div className="border-t pt-3 space-y-3">
-                <Label className="text-sm font-medium">Rework</Label>
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Rework Qty</Label>
-                  <Input type="number" value={reworkQty} onChange={(e) => setReworkQty(e.target.value)} placeholder="0" min="0" />
-                </div>
-                {Number(reworkQty) > 0 && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Rework Issue *</Label>
-                    <Textarea value={reworkIssue} onChange={(e) => setReworkIssue(e.target.value)} placeholder="Describe the rework issue..." rows={2} />
                   </div>
                 )}
               </div>
