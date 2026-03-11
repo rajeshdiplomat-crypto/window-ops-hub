@@ -13,7 +13,7 @@ import {
   DollarSign,
   Paintbrush,
   ShoppingCart,
-  ClipboardCheck,
+  
   Truck,
   Wrench,
   Warehouse,
