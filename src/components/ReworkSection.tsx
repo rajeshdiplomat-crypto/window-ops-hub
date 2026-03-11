@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -14,61 +15,52 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { logActivity } from "@/lib/activityLog";
 
-interface ReworkLog {
-  id: string;
-  order_id: string;
-  rework_qty: number;
-  rework_issue: string;
-  reported_by: string | null;
-  reported_at: string;
-  resolved: boolean;
-  resolved_at: string | null;
-}
+const REWORK_STATUSES = ["Pending", "In Progress", "Solved", "Closed"];
 
 interface ReworkSectionProps {
   orderId: string;
 }
 
 export default function ReworkSection({ orderId }: ReworkSectionProps) {
-  const [logs, setLogs] = useState<ReworkLog[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [qty, setQty] = useState("");
-  const [issue, setIssue] = useState("");
+  const [issueType, setIssueType] = useState("");
+  const [responsible, setResponsible] = useState("");
+  const [solution, setSolution] = useState("");
+  const [cost, setCost] = useState("");
+  const [status, setStatus] = useState("Pending");
+  const [remarks, setRemarks] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [profiles, setProfiles] = useState<Record<string, string>>({});
 
   const fetchLogs = async () => {
     const { data } = await (supabase.from("rework_logs" as any) as any)
       .select("*")
       .eq("order_id", orderId)
       .order("reported_at", { ascending: false });
-    const items = (data || []) as ReworkLog[];
-    setLogs(items);
-
-    // Fetch reporter names
-    const userIds = [...new Set(items.map((l) => l.reported_by).filter(Boolean))] as string[];
-    if (userIds.length > 0) {
-      const { data: profs } = await supabase.from("profiles").select("user_id, name").in("user_id", userIds);
-      const map: Record<string, string> = {};
-      (profs || []).forEach((p: any) => { map[p.user_id] = p.name; });
-      setProfiles(map);
-    }
+    setLogs(data || []);
   };
 
   useEffect(() => { fetchLogs(); }, [orderId]);
 
   const handleAdd = async () => {
     const q = Number(qty) || 0;
-    if (q <= 0) return toast.error("Rework Qty must be > 0");
-    if (!issue.trim()) return toast.error("Rework Issue is required");
+    if (q <= 0) return toast.error("Qty must be > 0");
+    if (!issueType.trim()) return toast.error("Issue Type is required");
 
     setSubmitting(true);
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await (supabase.from("rework_logs" as any) as any).insert({
       order_id: orderId,
       rework_qty: q,
-      rework_issue: issue.trim(),
+      rework_issue: issueType.trim(),
+      issue_type: issueType.trim(),
+      responsible_person: responsible || null,
+      solution: solution || null,
+      cost: Number(cost) || 0,
+      status,
       reported_by: user?.id || null,
+      reported_date: format(new Date(), "yyyy-MM-dd"),
     });
     setSubmitting(false);
 
@@ -77,55 +69,88 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
     } else {
       await logActivity({
         orderId,
-        module: "rework",
+        module: "Rework",
         fieldName: "rework_added",
         oldValue: null,
-        newValue: `Qty: ${q}, Issue: ${issue.trim()}`,
+        newValue: `Qty: ${q}, Issue: ${issueType.trim()}`,
       });
       toast.success("Rework logged");
-      setQty("");
-      setIssue("");
+      setQty(""); setIssueType(""); setResponsible(""); setSolution(""); setCost(""); setStatus("Pending"); setRemarks("");
       setShowForm(false);
       fetchLogs();
     }
   };
 
-  const toggleResolved = async (log: ReworkLog) => {
-    const newResolved = !log.resolved;
+  const updateStatus = async (log: any, newStatus: string) => {
+    const oldStatus = log.status;
     await (supabase.from("rework_logs" as any) as any).update({
-      resolved: newResolved,
-      resolved_at: newResolved ? new Date().toISOString() : null,
+      status: newStatus,
+      resolved: newStatus === "Solved" || newStatus === "Closed",
+      resolved_at: (newStatus === "Solved" || newStatus === "Closed") ? new Date().toISOString() : null,
     }).eq("id", log.id);
     await logActivity({
       orderId,
-      module: "rework",
-      fieldName: "rework_resolved",
-      oldValue: String(log.resolved),
-      newValue: String(newResolved),
+      module: "Rework",
+      fieldName: "rework_status",
+      oldValue: oldStatus || "Pending",
+      newValue: newStatus,
     });
     fetchLogs();
+  };
+
+  const statusColor = (s: string) => {
+    switch (s) {
+      case "Pending": return "bg-warning/15 text-warning border-warning/20";
+      case "In Progress": return "bg-blue-500/15 text-blue-600 border-blue-500/20";
+      case "Solved": return "bg-green-500/15 text-green-600 border-green-500/20";
+      case "Closed": return "bg-muted text-muted-foreground border-muted";
+      default: return "";
+    }
   };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Rework Log ({logs.reduce((s, l) => s + l.rework_qty, 0)} total)</CardTitle>
+        <CardTitle className="text-base">Rework Log ({logs.reduce((s: number, l: any) => s + (l.rework_qty || 0), 0)} total qty)</CardTitle>
         <Button size="sm" className="gap-1" onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-4 w-4" /> Add Rework
+          <Plus className="h-4 w-4" /> Add Rework Issue
         </Button>
       </CardHeader>
       <CardContent>
         {showForm && (
           <div className="mb-4 p-3 border rounded-md space-y-3 bg-muted/30">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Rework Qty *</Label>
+                <Label className="text-xs">Qty *</Label>
                 <Input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" />
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Issue Type *</Label>
+                <Input value={issueType} onChange={(e) => setIssueType(e.target.value)} placeholder="e.g. glass scratch" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Responsible</Label>
+                <Input value={responsible} onChange={(e) => setResponsible(e.target.value)} placeholder="Person / Team" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Rework Issue *</Label>
-              <Textarea value={issue} onChange={(e) => setIssue(e.target.value)} placeholder="Describe the issue..." rows={2} />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Solution</Label>
+                <Input value={solution} onChange={(e) => setSolution(e.target.value)} placeholder="Corrective action" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cost</Label>
+                <Input type="number" min="0" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {REWORK_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleAdd} disabled={submitting}>{submitting ? "Saving…" : "Save"}</Button>
@@ -142,28 +167,35 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Issue</TableHead>
-                <TableHead>Reported By</TableHead>
+                <TableHead>Issue Type</TableHead>
+                <TableHead>Responsible</TableHead>
+                <TableHead>Solution</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-28" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map((log) => (
+              {logs.map((log: any) => (
                 <TableRow key={log.id}>
-                  <TableCell className="text-sm">{format(new Date(log.reported_at), "dd MMM yyyy")}</TableCell>
+                  <TableCell className="text-sm">{log.reported_date || format(new Date(log.reported_at), "dd MMM yyyy")}</TableCell>
                   <TableCell className="text-right">{log.rework_qty}</TableCell>
-                  <TableCell className="text-sm max-w-[200px] truncate" title={log.rework_issue}>{log.rework_issue}</TableCell>
-                  <TableCell className="text-sm">{log.reported_by ? profiles[log.reported_by] || "—" : "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[150px] truncate" title={log.issue_type || log.rework_issue}>{log.issue_type || log.rework_issue}</TableCell>
+                  <TableCell className="text-sm">{log.responsible_person || "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[150px] truncate">{log.solution || "—"}</TableCell>
+                  <TableCell className="text-right">{log.cost ? `₹${Number(log.cost).toLocaleString()}` : "—"}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={log.resolved ? "bg-success/15 text-success border-success/20" : "bg-warning/15 text-warning border-warning/20"}>
-                      {log.resolved ? "Resolved" : "Open"}
+                    <Badge variant="outline" className={statusColor(log.status || (log.resolved ? "Solved" : "Pending"))}>
+                      {log.status || (log.resolved ? "Solved" : "Pending")}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => toggleResolved(log)}>
-                      {log.resolved ? "Reopen" : "Resolve"}
-                    </Button>
+                    <Select value={log.status || "Pending"} onValueChange={(val) => updateStatus(log, val)}>
+                      <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {REWORK_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                 </TableRow>
               ))}
