@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -32,8 +32,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
   const [soNo, setSoNo] = useState("");
   const [colourShade, setColourShade] = useState("");
   const [salesperson, setSalesperson] = useState("");
-  const [productType, setProductType] = useState<"Windows" | "Others">("Windows");
-  const [otherProductType, setOtherProductType] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [qty, setQty] = useState("");
   const [sqft, setSqft] = useState("");
   const [orderValue, setOrderValue] = useState("");
@@ -47,7 +46,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
   const [projectClients, setProjectClients] = useState<SettingsItem[]>([]);
   const [colourShades, setColourShades] = useState<SettingsItem[]>([]);
   const [salespersons, setSalespersons] = useState<SettingsItem[]>([]);
-  const [otherProductTypes, setOtherProductTypes] = useState<SettingsItem[]>([]);
+  const [products, setProducts] = useState<SettingsItem[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +64,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       setProjectClients((pc.data as SettingsItem[]) || []);
       setColourShades((cs.data as SettingsItem[]) || []);
       setSalespersons((sp.data as SettingsItem[]) || []);
-      setOtherProductTypes((opt.data as SettingsItem[]) || []);
+      setProducts((opt.data as SettingsItem[]) || []);
     };
     fetchAll();
   }, [open]);
@@ -82,8 +81,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
     setSoNo("");
     setColourShade("");
     setSalesperson("");
-    setProductType("Windows");
-    setOtherProductType("");
+    setSelectedProducts([]);
     setQty("");
     setSqft("");
     setOrderValue("");
@@ -96,7 +94,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
 
     // Validations
     if (!orderName.trim()) return toast.error("Order Name is required");
-    if (productType === "Windows" && (Number(qty) || 0) <= 0) return toast.error("Number of Windows must be > 0");
+    if (selectedProducts.length === 0) return toast.error("Select at least one product");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
 
     // Quotation number uniqueness check
@@ -117,8 +115,8 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       quote_no: soNo.trim() || null,
       colour_shade: colourShade || null,
       salesperson: salesperson || null,
-      product_type: productType,
-      other_product_type: productType === "Others" ? otherProductType : null,
+      product_type: selectedProducts.join(", "),
+      other_product_type: null,
       total_windows: Number(qty) || 0,
       sqft: Number(sqft) || 0,
       order_value: Number(orderValue) || 0,
@@ -246,43 +244,29 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
             {/* RIGHT COLUMN - Commercial Data */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Product Type</Label>
-                <RadioGroup
-                  value={productType}
-                  onValueChange={(v) => setProductType(v as "Windows" | "Others")}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="Windows" id="pt-windows" />
-                    <Label htmlFor="pt-windows" className="text-sm cursor-pointer">Windows</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="Others" id="pt-others" />
-                    <Label htmlFor="pt-others" className="text-sm cursor-pointer">Others</Label>
-                  </div>
-                </RadioGroup>
+                <Label className="text-sm font-medium">Products *</Label>
+                <div className="flex flex-wrap gap-3">
+                  {products.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={selectedProducts.includes(p.name)}
+                        onCheckedChange={(checked) => {
+                          setSelectedProducts((prev) =>
+                            checked ? [...prev, p.name] : prev.filter((n) => n !== p.name)
+                          );
+                        }}
+                      />
+                      <span className="text-sm">{p.name}</span>
+                    </label>
+                  ))}
+                  {products.length === 0 && (
+                    <span className="text-sm text-muted-foreground">No products configured in Settings</span>
+                  )}
+                </div>
               </div>
 
-              {productType === "Others" && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Other Product Type</Label>
-                  <Select value={otherProductType} onValueChange={setOtherProductType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {otherProductTypes.map((t) => (
-                        <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
               <div className="space-y-1.5">
-                <Label className="text-sm">
-                  {productType === "Windows" ? "No. of Windows *" : "Qty"}
-                </Label>
+                <Label className="text-sm">Qty</Label>
                 <Input
                   type="number"
                   value={qty}
