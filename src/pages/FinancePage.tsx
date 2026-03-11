@@ -177,8 +177,8 @@ export default function FinancePage() {
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList>
           <TabsTrigger value="pending">Pending for Approval</TabsTrigger>
-          <TabsTrigger value="production">Production Approval</TabsTrigger>
-          <TabsTrigger value="dispatch">Dispatch Approval</TabsTrigger>
+          <TabsTrigger value="production">Approved Production</TabsTrigger>
+          <TabsTrigger value="dispatch">Approved Dispatch</TabsTrigger>
           <TabsTrigger value="all">All Orders</TabsTrigger>
         </TabsList>
       </Tabs>
