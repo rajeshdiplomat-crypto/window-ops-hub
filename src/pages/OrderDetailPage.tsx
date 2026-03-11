@@ -16,6 +16,7 @@ import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
 import { checkMaterialDependency } from "@/lib/nextActions";
 import ReworkSection from "@/components/ReworkSection";
+import FinanceSection from "@/components/FinanceSection";
 import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
@@ -221,6 +222,7 @@ export default function OrderDetailPage() {
         <TabsList>
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="finance">Finance</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
@@ -271,6 +273,10 @@ export default function OrderDetailPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="finance" className="mt-4">
+          <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4">

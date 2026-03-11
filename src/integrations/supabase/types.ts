@@ -343,6 +343,8 @@ export type Database = {
       orders: {
         Row: {
           advance_received: number
+          approval_for_dispatch: string
+          approval_for_production: string
           balance_amount: number
           colour_shade: string | null
           commercial_status: string
@@ -351,6 +353,7 @@ export type Database = {
           dealer_name: string
           design_status: string
           dispatch_status: string
+          finance_remarks: string | null
           finance_status: string
           id: string
           installation_status: string
@@ -373,6 +376,8 @@ export type Database = {
         }
         Insert: {
           advance_received?: number
+          approval_for_dispatch?: string
+          approval_for_production?: string
           balance_amount?: number
           colour_shade?: string | null
           commercial_status?: string
@@ -381,6 +386,7 @@ export type Database = {
           dealer_name?: string
           design_status?: string
           dispatch_status?: string
+          finance_remarks?: string | null
           finance_status?: string
           id?: string
           installation_status?: string
@@ -403,6 +409,8 @@ export type Database = {
         }
         Update: {
           advance_received?: number
+          approval_for_dispatch?: string
+          approval_for_production?: string
           balance_amount?: number
           colour_shade?: string | null
           commercial_status?: string
@@ -411,6 +419,7 @@ export type Database = {
           dealer_name?: string
           design_status?: string
           dispatch_status?: string
+          finance_remarks?: string | null
           finance_status?: string
           id?: string
           installation_status?: string
@@ -453,6 +462,44 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      payment_logs: {
+        Row: {
+          amount: number
+          created_at: string
+          entered_by: string | null
+          id: string
+          order_id: string
+          payment_date: string | null
+          payment_mode: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          order_id: string
+          payment_date?: string | null
+          payment_mode?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          order_id?: string
+          payment_date?: string | null
+          payment_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       production_status: {
         Row: {
