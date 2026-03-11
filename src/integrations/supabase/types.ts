@@ -346,6 +346,9 @@ export type Database = {
           approval_for_dispatch: string
           approval_for_production: string
           balance_amount: number
+          coated_extrusion_availability: string
+          coating_delivery_date: string | null
+          coating_status: string
           colour_shade: string | null
           commercial_status: string
           created_at: string
@@ -355,14 +358,24 @@ export type Database = {
           design_remarks: string | null
           design_status: string
           dispatch_status: string
+          extrusion_availability: string
+          extrusion_delivery_date: string | null
+          extrusion_po_status: string
           finance_remarks: string | null
           finance_status: string
+          glass_availability: string
+          glass_delivery_date: string | null
+          glass_po_status: string
+          hardware_availability: string
+          hardware_delivery_date: string | null
+          hardware_po_status: string
           id: string
           installation_status: string
           order_name: string
           order_type: string
           order_value: number
           other_product_type: string | null
+          procurement_remarks: string | null
           product_type: string
           quote_no: string | null
           rework_issue: string | null
@@ -370,6 +383,7 @@ export type Database = {
           sales_order_no: string | null
           salesperson: string | null
           sqft: number
+          store_remarks: string | null
           survey_done_windows: number
           survey_remarks: string | null
           survey_status: string
@@ -383,6 +397,9 @@ export type Database = {
           approval_for_dispatch?: string
           approval_for_production?: string
           balance_amount?: number
+          coated_extrusion_availability?: string
+          coating_delivery_date?: string | null
+          coating_status?: string
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
@@ -392,14 +409,24 @@ export type Database = {
           design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
+          extrusion_availability?: string
+          extrusion_delivery_date?: string | null
+          extrusion_po_status?: string
           finance_remarks?: string | null
           finance_status?: string
+          glass_availability?: string
+          glass_delivery_date?: string | null
+          glass_po_status?: string
+          hardware_availability?: string
+          hardware_delivery_date?: string | null
+          hardware_po_status?: string
           id?: string
           installation_status?: string
           order_name?: string
           order_type?: string
           order_value?: number
           other_product_type?: string | null
+          procurement_remarks?: string | null
           product_type?: string
           quote_no?: string | null
           rework_issue?: string | null
@@ -407,6 +434,7 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          store_remarks?: string | null
           survey_done_windows?: number
           survey_remarks?: string | null
           survey_status?: string
@@ -420,6 +448,9 @@ export type Database = {
           approval_for_dispatch?: string
           approval_for_production?: string
           balance_amount?: number
+          coated_extrusion_availability?: string
+          coating_delivery_date?: string | null
+          coating_status?: string
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
@@ -429,14 +460,24 @@ export type Database = {
           design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
+          extrusion_availability?: string
+          extrusion_delivery_date?: string | null
+          extrusion_po_status?: string
           finance_remarks?: string | null
           finance_status?: string
+          glass_availability?: string
+          glass_delivery_date?: string | null
+          glass_po_status?: string
+          hardware_availability?: string
+          hardware_delivery_date?: string | null
+          hardware_po_status?: string
           id?: string
           installation_status?: string
           order_name?: string
           order_type?: string
           order_value?: number
           other_product_type?: string | null
+          procurement_remarks?: string | null
           product_type?: string
           quote_no?: string | null
           rework_issue?: string | null
@@ -444,6 +485,7 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
+          store_remarks?: string | null
           survey_done_windows?: number
           survey_remarks?: string | null
           survey_status?: string

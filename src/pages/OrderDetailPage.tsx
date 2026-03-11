@@ -19,6 +19,8 @@ import ReworkSection from "@/components/ReworkSection";
 import FinanceSection from "@/components/FinanceSection";
 import SurveySection from "@/components/SurveySection";
 import DesignSection from "@/components/DesignSection";
+import StoreSection from "@/components/StoreSection";
+import ProcurementSection from "@/components/ProcurementSection";
 import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
@@ -291,23 +293,9 @@ export default function OrderDetailPage() {
           <DesignSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
 
-        <TabsContent value="materials" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Material Procurement</CardTitle>
-              {!material && (
-                <Button size="sm" onClick={async () => {
-                  await supabase.from("material_status").insert({ order_id: id });
-                  fetchAll();
-                }}>Initialize</Button>
-              )}
-            </CardHeader>
-            {material && (
-              <CardContent>
-                <MaterialFields material={material} onRefresh={fetchAll} />
-              </CardContent>
-            )}
-          </Card>
+        <TabsContent value="materials" className="mt-4 space-y-4">
+          <StoreSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <ProcurementSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
 
         <TabsContent value="production" className="mt-4">
