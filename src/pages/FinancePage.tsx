@@ -111,8 +111,8 @@ export default function FinancePage() {
         o.approval_for_dispatch === "Pending" ||
         draftOrderIds.has(o.id);
     }
-    if (tab === "production") return o.approval_for_production !== "Approved";
-    if (tab === "dispatch") return o.approval_for_dispatch !== "Approved";
+    if (tab === "production") return o.approval_for_production === "Approved";
+    if (tab === "dispatch") return o.approval_for_dispatch === "Approved";
     return true;
   });
 
@@ -177,8 +177,8 @@ export default function FinancePage() {
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList>
           <TabsTrigger value="pending">Pending for Approval</TabsTrigger>
-          <TabsTrigger value="production">Production Approval</TabsTrigger>
-          <TabsTrigger value="dispatch">Dispatch Approval</TabsTrigger>
+          <TabsTrigger value="production">Approved Production</TabsTrigger>
+          <TabsTrigger value="dispatch">Approved Dispatch</TabsTrigger>
           <TabsTrigger value="all">All Orders</TabsTrigger>
         </TabsList>
       </Tabs>
