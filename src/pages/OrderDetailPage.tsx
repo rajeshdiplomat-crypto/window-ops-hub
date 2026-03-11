@@ -15,6 +15,7 @@ import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusCon
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
 import ReworkSection from "@/components/ReworkSection";
+import InstallationSection from "@/components/InstallationSection";
 import FinanceSection from "@/components/FinanceSection";
 import SurveySection from "@/components/SurveySection";
 import DesignSection from "@/components/DesignSection";
