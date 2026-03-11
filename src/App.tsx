@@ -42,7 +42,7 @@ function ProtectedRoutes() {
         <Route path="/procurement" element={<ProcurementPage />} />
         <Route path="/production" element={<ProductionDashboard />} />
         <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
-        <Route path="/dispatch" element={<DepartmentQueuePage departmentKey="dispatch" />} />
+        <Route path="/dispatch" element={<DispatchPage />} />
         <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
         <Route path="/rework" element={<DepartmentQueuePage departmentKey="rework" />} />
         <Route path="/store" element={<StorePage />} />
