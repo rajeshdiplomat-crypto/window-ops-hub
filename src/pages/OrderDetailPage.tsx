@@ -14,7 +14,6 @@ import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
-import { checkMaterialDependency } from "@/lib/nextActions";
 import ReworkSection from "@/components/ReworkSection";
 import FinanceSection from "@/components/FinanceSection";
 import SurveySection from "@/components/SurveySection";
@@ -30,132 +29,22 @@ const STATUS_FIELDS: StatusField[] = [
   "design_status", "dispatch_status", "installation_status",
 ];
 
-const MATERIAL_STATUSES = ["Not Procured", "PO Released", "Received"];
-const ALUMINIUM_STATUSES = ["Not Procured", "PO Released", "Received", "Sent for Coating", "Coating Completed"];
 const INSTALLATION_STATUSES = ["Pending", "Planned", "Completed"];
-
-function MaterialFields({ material, onRefresh }: { material: any; onRefresh: () => void }) {
-  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    supabase.from("coating_vendors").select("id, name").eq("active", true).then(({ data }) => setVendors((data as any[]) || []));
-  }, []);
-
-  const updateField = async (field: string, value: any) => {
-    const oldVal = material[field];
-    if (String(oldVal ?? "") === String(value ?? "")) return;
-    await logAuditEntry({ entityType: "material_status", entityId: material.id, field, oldValue: oldVal != null ? String(oldVal) : null, newValue: value != null ? String(value) : null });
-    await supabase.from("material_status").update({ [field]: value }).eq("id", material.id);
-    onRefresh();
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Material statuses as dropdowns */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Aluminium Status</Label>
-          <Select value={material.aluminium_status} onValueChange={(v) => updateField("aluminium_status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ALUMINIUM_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Glass Status</Label>
-          <Select value={material.glass_status} onValueChange={(v) => updateField("glass_status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Hardware Status</Label>
-          <Select value={material.hardware_status} onValueChange={(v) => updateField("hardware_status", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Expected dates */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Aluminium Expected Date", field: "aluminium_expected_date" },
-          { label: "Glass Expected Date", field: "glass_expected_date" },
-          { label: "Hardware Expected Date", field: "hardware_expected_date" },
-        ].map((f) => (
-          <div key={f.field} className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{f.label}</Label>
-            <Input type="date" defaultValue={material[f.field] || ""} onBlur={(e) => updateField(f.field, e.target.value || null)} />
-          </div>
-        ))}
-      </div>
-
-      {/* Coating vendor */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
-          <Select value={material.coating_vendor || ""} onValueChange={(v) => updateField("coating_vendor", v)}>
-            <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
-            <SelectContent>
-              {vendors.map((v) => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
-  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
-  }, []);
-  return (
-    <Select onValueChange={async (unitName) => {
-      await supabase.from("production_status").insert({ order_id: orderId, unit: unitName } as any);
-      onAdded();
-    }}>
-      <SelectTrigger className="w-36 h-8 text-xs">
-        <SelectValue placeholder="Add unit..." />
-      </SelectTrigger>
-      <SelectContent>
-        {units.map((u) => (
-          <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
-  const [material, setMaterial] = useState<any>(null);
-  const [production, setProduction] = useState<any[]>([]);
-  const [dispatches, setDispatches] = useState<any[]>([]);
   const [installation, setInstallation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = async () => {
     if (!id) return;
-    const [oRes, mRes, pRes, dRes, iRes] = await Promise.all([
+    const [oRes, iRes] = await Promise.all([
       supabase.from("orders").select("*").eq("id", id).single(),
-      supabase.from("material_status").select("*").eq("order_id", id).maybeSingle(),
-      supabase.from("production_status").select("*").eq("order_id", id),
-      supabase.from("dispatch").select("*").eq("order_id", id),
       supabase.from("installation").select("*").eq("order_id", id).maybeSingle(),
     ]);
     if (oRes.error) { toast.error("Order not found"); return; }
     setOrder(oRes.data);
-    setMaterial(mRes.data);
-    setProduction(pRes.data || []);
-    setDispatches(dRes.data || []);
     setInstallation(iRes.data);
     setLoading(false);
   };
@@ -174,7 +63,6 @@ export default function OrderDetailPage() {
         oldValue: oldValue != null ? String(oldValue) : null,
         newValue: value != null ? String(value) : null,
       });
-      // Fire in-app notifications for status changes
       if (field.endsWith("_status")) {
         triggerStatusNotification(id!, order.order_name, field, String(value));
       }
@@ -202,7 +90,6 @@ export default function OrderDetailPage() {
         <Badge variant="outline" className="text-sm">{order.commercial_status}</Badge>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Windows", value: order.total_windows },
@@ -342,7 +229,7 @@ export default function OrderDetailPage() {
                     }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {["Pending", "Planned", "Completed"].map((s) => (
+                        {INSTALLATION_STATUSES.map((s) => (
                           <SelectItem key={s} value={s}>{s}</SelectItem>
                         ))}
                       </SelectContent>
