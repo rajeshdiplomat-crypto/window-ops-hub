@@ -14,38 +14,146 @@ import StatusDropdown from "@/components/StatusDropdown";
 import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusConfig";
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
+import { checkMaterialDependency } from "@/lib/nextActions";
 import ReworkSection from "@/components/ReworkSection";
-import InstallationSection from "@/components/InstallationSection";
-import FinanceSection from "@/components/FinanceSection";
-import SurveySection from "@/components/SurveySection";
-import DesignSection from "@/components/DesignSection";
-import StoreSection from "@/components/StoreSection";
-import ProcurementSection from "@/components/ProcurementSection";
-import ProductionSection from "@/components/ProductionSection";
-import DispatchSection from "@/components/DispatchSection";
 import { logActivity } from "@/lib/activityLog";
+
+const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
+const STAGE_LABELS: Record<string, string> = {
+  cutting: "Cutting", assembly: "Assembly", glazing: "Glazing", qc: "QC", packing: "Packing",
+};
 
 const STATUS_FIELDS: StatusField[] = [
   "commercial_status", "finance_status", "survey_status",
   "design_status", "dispatch_status", "installation_status",
 ];
 
+const MATERIAL_STATUSES = ["Not Procured", "PO Released", "Received"];
+const ALUMINIUM_STATUSES = ["Not Procured", "PO Released", "Received", "Sent for Coating", "Coating Completed"];
 const INSTALLATION_STATUSES = ["Pending", "Planned", "Completed"];
+
+function MaterialFields({ material, onRefresh }: { material: any; onRefresh: () => void }) {
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("coating_vendors").select("id, name").eq("active", true).then(({ data }) => setVendors((data as any[]) || []));
+  }, []);
+
+  const updateField = async (field: string, value: any) => {
+    const oldVal = material[field];
+    if (String(oldVal ?? "") === String(value ?? "")) return;
+    await logAuditEntry({ entityType: "material_status", entityId: material.id, field, oldValue: oldVal != null ? String(oldVal) : null, newValue: value != null ? String(value) : null });
+    await supabase.from("material_status").update({ [field]: value }).eq("id", material.id);
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Material statuses as dropdowns */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Aluminium Status</Label>
+          <Select value={material.aluminium_status} onValueChange={(v) => updateField("aluminium_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALUMINIUM_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Glass Status</Label>
+          <Select value={material.glass_status} onValueChange={(v) => updateField("glass_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Hardware Status</Label>
+          <Select value={material.hardware_status} onValueChange={(v) => updateField("hardware_status", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {MATERIAL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Expected dates */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Aluminium Expected Date", field: "aluminium_expected_date" },
+          { label: "Glass Expected Date", field: "glass_expected_date" },
+          { label: "Hardware Expected Date", field: "hardware_expected_date" },
+        ].map((f) => (
+          <div key={f.field} className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{f.label}</Label>
+            <Input type="date" defaultValue={material[f.field] || ""} onBlur={(e) => updateField(f.field, e.target.value || null)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Coating vendor */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Coating Vendor</Label>
+          <Select value={material.coating_vendor || ""} onValueChange={(v) => updateField("coating_vendor", v)}>
+            <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
+            <SelectContent>
+              {vendors.map((v) => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddUnitButton({ orderId, onAdded }: { orderId: string; onAdded: () => void }) {
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    supabase.from("production_units").select("id, name").eq("active", true).then(({ data }) => setUnits((data as any[]) || []));
+  }, []);
+  return (
+    <Select onValueChange={async (unitName) => {
+      await supabase.from("production_status").insert({ order_id: orderId, unit: unitName } as any);
+      onAdded();
+    }}>
+      <SelectTrigger className="w-36 h-8 text-xs">
+        <SelectValue placeholder="Add unit..." />
+      </SelectTrigger>
+      <SelectContent>
+        {units.map((u) => (
+          <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
+  const [material, setMaterial] = useState<any>(null);
+  const [production, setProduction] = useState<any[]>([]);
+  const [dispatches, setDispatches] = useState<any[]>([]);
   const [installation, setInstallation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = async () => {
     if (!id) return;
-    const [oRes, iRes] = await Promise.all([
+    const [oRes, mRes, pRes, dRes, iRes] = await Promise.all([
       supabase.from("orders").select("*").eq("id", id).single(),
+      supabase.from("material_status").select("*").eq("order_id", id).maybeSingle(),
+      supabase.from("production_status").select("*").eq("order_id", id),
+      supabase.from("dispatch").select("*").eq("order_id", id),
       supabase.from("installation").select("*").eq("order_id", id).maybeSingle(),
     ]);
     if (oRes.error) { toast.error("Order not found"); return; }
     setOrder(oRes.data);
+    setMaterial(mRes.data);
+    setProduction(pRes.data || []);
+    setDispatches(dRes.data || []);
     setInstallation(iRes.data);
     setLoading(false);
   };
@@ -64,6 +172,7 @@ export default function OrderDetailPage() {
         oldValue: oldValue != null ? String(oldValue) : null,
         newValue: value != null ? String(value) : null,
       });
+      // Fire in-app notifications for status changes
       if (field.endsWith("_status")) {
         triggerStatusNotification(id!, order.order_name, field, String(value));
       }
@@ -91,6 +200,7 @@ export default function OrderDetailPage() {
         <Badge variant="outline" className="text-sm">{order.commercial_status}</Badge>
       </div>
 
+      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Windows", value: order.total_windows },
@@ -108,12 +218,9 @@ export default function OrderDetailPage() {
       </div>
 
       <Tabs defaultValue="statuses">
-        <TabsList className="flex-wrap">
+        <TabsList>
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="survey">Survey</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-          <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
@@ -166,33 +273,196 @@ export default function OrderDetailPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="survey" className="mt-4">
-          <SurveySection orderId={id!} order={order} onRefresh={fetchAll} />
-        </TabsContent>
-
-        <TabsContent value="finance" className="mt-4">
-          <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} />
-        </TabsContent>
-
-        <TabsContent value="design" className="mt-4">
-          <DesignSection orderId={id!} order={order} onRefresh={fetchAll} />
-        </TabsContent>
-
-        <TabsContent value="materials" className="mt-4 space-y-4">
-          <StoreSection orderId={id!} order={order} onRefresh={fetchAll} />
-          <ProcurementSection orderId={id!} order={order} onRefresh={fetchAll} />
+        <TabsContent value="materials" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Material Procurement</CardTitle>
+              {!material && (
+                <Button size="sm" onClick={async () => {
+                  await supabase.from("material_status").insert({ order_id: id });
+                  fetchAll();
+                }}>Initialize</Button>
+              )}
+            </CardHeader>
+            {material && (
+              <CardContent>
+                <MaterialFields material={material} onRefresh={fetchAll} />
+              </CardContent>
+            )}
+          </Card>
         </TabsContent>
 
         <TabsContent value="production" className="mt-4">
-          <ProductionSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Production Status ({order.total_windows} total windows)</CardTitle>
+              <AddUnitButton orderId={id!} onAdded={fetchAll} />
+            </CardHeader>
+            <CardContent>
+              {production.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No production entries yet. Add a unit to start tracking.</p>
+              ) : (
+                <div className="space-y-4">
+                  {production.map((p) => (
+                    <div key={p.id} className="rounded-md border p-4">
+                      <p className="font-medium text-sm mb-3">{p.unit || "Unit"}</p>
+                      <div className="grid grid-cols-5 gap-3">
+                        {STAGES.map((stage) => (
+                          <div key={stage} className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">{STAGE_LABELS[stage]}</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={order.total_windows}
+                              defaultValue={p[stage] || 0}
+                              onBlur={async (e) => {
+                                const newVal = Number(e.target.value) || 0;
+                                if (newVal !== p[stage]) {
+                                  // Check material dependency before allowing update
+                                  if (newVal > (p[stage] || 0)) {
+                                    const blocked = checkMaterialDependency(stage, material);
+                                    if (blocked) {
+                                      toast.error(blocked);
+                                      e.target.value = String(p[stage] || 0);
+                                      return;
+                                    }
+                                  }
+                                  await logAuditEntry({ entityType: "production_status", entityId: p.id, field: stage, oldValue: String(p[stage]), newValue: String(newVal) });
+                                  await supabase.from("production_status").update({ [stage]: newVal }).eq("id", p.id);
+                                  fetchAll();
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="dispatch" className="mt-4">
-          <DispatchSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Dispatch</CardTitle>
+                {order && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(() => {
+                      const totalDispatched = dispatches.reduce((s, d) => s + (d.windows_dispatched || 0), 0);
+                      const remaining = order.total_windows - totalDispatched;
+                      return `Dispatched: ${totalDispatched} / ${order.total_windows} · Remaining: ${remaining}`;
+                    })()}
+                  </p>
+                )}
+              </div>
+              <Button size="sm" onClick={async () => {
+                await supabase.from("dispatch").insert({ order_id: id });
+                fetchAll();
+              }}>Add Shipment</Button>
+            </CardHeader>
+            <CardContent>
+              {dispatches.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No dispatches yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {dispatches.map((d, idx) => (
+                    <div key={d.id} className="rounded-md border p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Shipment #{idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Windows Dispatched</Label>
+                          <Input type="number" min={0} defaultValue={d.windows_dispatched} onBlur={async (e) => {
+                            const newVal = Number(e.target.value) || 0;
+                            if (newVal !== d.windows_dispatched) {
+                              await logAuditEntry({ entityType: "dispatch", entityId: d.id, field: "windows_dispatched", oldValue: String(d.windows_dispatched), newValue: String(newVal) });
+                              await supabase.from("dispatch").update({ windows_dispatched: newVal }).eq("id", d.id);
+                              fetchAll();
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Dispatch Date</Label>
+                          <Input type="date" defaultValue={d.dispatch_date || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ dispatch_date: e.target.value || null }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Transporter Name</Label>
+                          <Input defaultValue={d.transporter || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ transporter: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Vehicle Details</Label>
+                          <Input defaultValue={d.vehicle_details || ""} onBlur={async (e) => {
+                            await supabase.from("dispatch").update({ vehicle_details: e.target.value }).eq("id", d.id);
+                            fetchAll();
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="installation" className="mt-4">
-          <InstallationSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Installation</CardTitle>
+              {!installation && (
+                <Button size="sm" onClick={async () => {
+                  await supabase.from("installation").insert({ order_id: id });
+                  fetchAll();
+                }}>Initialize</Button>
+              )}
+            </CardHeader>
+            {installation && (
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Planned Date</Label>
+                    <Input type="date" defaultValue={installation.installation_planned || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_planned", oldValue: installation.installation_planned, newValue: e.target.value || null });
+                      await supabase.from("installation").update({ installation_planned: e.target.value || null }).eq("id", installation.id);
+                      fetchAll();
+                    }} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Completed Date</Label>
+                    <Input type="date" defaultValue={installation.installation_completed || ""} onBlur={async (e) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_completed", oldValue: installation.installation_completed, newValue: e.target.value || null });
+                      await supabase.from("installation").update({ installation_completed: e.target.value || null }).eq("id", installation.id);
+                      fetchAll();
+                    }} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Installation Status</Label>
+                    <Select value={installation.installation_status} onValueChange={async (val) => {
+                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: val });
+                      await supabase.from("installation").update({ installation_status: val }).eq("id", installation.id);
+                      fetchAll();
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["Pending", "Planned", "Completed"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
         </TabsContent>
         <TabsContent value="rework" className="mt-4">
           <ReworkSection orderId={id!} />

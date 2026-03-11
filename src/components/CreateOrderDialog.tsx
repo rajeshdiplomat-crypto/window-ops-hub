@@ -125,32 +125,17 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
       commercial_status: commercialStatus || "Pipeline",
     };
 
-    const { data: inserted, error } = await supabase.from("orders").insert(payload).select("id").single();
-    if (error) {
-      setSubmitting(false);
-      toast.error(error.message);
-      return;
-    }
-
-    // If advance received, create a Draft payment log entry
-    if (advanceReceived && Number(advanceAmount) > 0 && inserted) {
-      const { data: { user } } = await supabase.auth.getUser();
-      await (supabase.from("payment_logs" as any) as any).insert({
-        order_id: inserted.id,
-        amount: Number(advanceAmount),
-        payment_date: new Date().toISOString().split("T")[0],
-        payment_mode: null,
-        entered_by: user?.id || null,
-        source_module: "Sales",
-        status: "Draft",
-      });
-    }
-
+    const { error } = await supabase.from("orders").insert(payload);
     setSubmitting(false);
-    toast.success("Order created");
-    resetForm();
-    onOpenChange(false);
-    onCreated();
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Order created");
+      resetForm();
+      onOpenChange(false);
+      onCreated();
+    }
   };
 
   return (

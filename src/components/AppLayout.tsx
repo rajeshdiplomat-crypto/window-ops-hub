@@ -1,7 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRoles } from "@/hooks/useUserRoles";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationBell from "@/components/NotificationBell";
 import {
@@ -14,6 +13,7 @@ import {
   DollarSign,
   Paintbrush,
   ShoppingCart,
+  ClipboardCheck,
   Truck,
   Wrench,
   Warehouse,
@@ -32,26 +32,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Map each nav item to the roles that can see it. Empty = visible to all.
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/", group: 0, roles: [] as string[] },
-  { label: "Orders", icon: Package, path: "/orders", group: 0, roles: [] },
-  { label: "Sales", icon: Package, path: "/sales", group: 1, roles: ["sales"] },
-  { label: "Finance", icon: DollarSign, path: "/finance", group: 1, roles: ["finance"] },
-  { label: "Survey", icon: Eye, path: "/survey", group: 2, roles: ["survey"] },
-  { label: "Design", icon: Paintbrush, path: "/design", group: 2, roles: ["design"] },
-  { label: "Procurement", icon: ShoppingCart, path: "/procurement", group: 3, roles: ["procurement"] },
-  { label: "Store", icon: Warehouse, path: "/store", group: 3, roles: ["stores"] },
-  { label: "Production", icon: Factory, path: "/production", group: 4, roles: ["production"] },
-  { label: "Dispatch", icon: Truck, path: "/dispatch", group: 5, roles: ["dispatch"] },
-  { label: "Installation", icon: Wrench, path: "/installation", group: 5, roles: ["installation"] },
-  { label: "Rework", icon: RefreshCw, path: "/rework", group: 6, roles: [] },
-  { label: "Settings", icon: Settings, path: "/settings", group: 7, roles: ["admin"] },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Orders", icon: Package, path: "/orders" },
+  { label: "Sales", icon: Package, path: "/sales" },
+  { label: "Survey", icon: Eye, path: "/survey" },
+  { label: "Finance", icon: DollarSign, path: "/finance" },
+  { label: "Design", icon: Paintbrush, path: "/design" },
+  { label: "Store", icon: Warehouse, path: "/store" },
+  { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
+  { label: "Production", icon: Factory, path: "/production" },
+  { label: "Quality", icon: ClipboardCheck, path: "/quality" },
+  { label: "Dispatch", icon: Truck, path: "/dispatch" },
+  { label: "Installation", icon: Wrench, path: "/installation" },
+  { label: "Rework", icon: RefreshCw, path: "/rework" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
-  const { roles: userRoles } = useUserRoles();
   const location = useLocation();
   const [profileName, setProfileName] = useState("");
 
@@ -66,19 +64,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         if (data?.name) setProfileName(data.name);
       });
   }, [user]);
-
-  const isAdmin = userRoles.includes("admin");
-  const isManagement = userRoles.includes("management");
-
-  // Filter nav items based on user roles
-  const visibleItems = navItems.filter((item) => {
-    // Admin and management see everything
-    if (isAdmin || isManagement) return true;
-    // Items with no role restriction are visible to all
-    if (item.roles.length === 0) return true;
-    // Check if user has any of the required roles
-    return item.roles.some((r) => userRoles.includes(r as any));
-  });
 
   const initials = profileName
     ? profileName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -109,22 +94,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
           <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
         </div>
-        <nav className="flex-1 overflow-auto p-2 space-y-0.5">
-          {visibleItems.map((item, i) => {
-            const prevGroup = i > 0 ? visibleItems[i - 1].group : item.group;
-            return (
-              <div key={item.path}>
-                {i > 0 && item.group !== prevGroup && (
-                  <Separator className="my-1.5 bg-sidebar-border" />
-                )}
-                {renderLink(item.path, item.label, item.icon)}
-              </div>
-            );
-          })}
+        <nav className="flex-1 space-y-1 overflow-auto p-2">
+          {navItems.map((item) => renderLink(item.path, item.label, item.icon))}
+          <Separator className="my-2 bg-sidebar-border" />
+          {renderLink("/settings", "Settings", Settings)}
         </nav>
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
         <header className="flex h-14 items-center justify-end gap-3 border-b px-4 bg-card shrink-0">
           <NotificationBell />
           <DropdownMenu>

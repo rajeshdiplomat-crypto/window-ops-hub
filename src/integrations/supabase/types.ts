@@ -187,50 +187,6 @@ export type Database = {
           },
         ]
       }
-      dispatch_logs: {
-        Row: {
-          created_at: string
-          dispatch_date: string | null
-          entered_by: string | null
-          id: string
-          order_id: string
-          remarks: string | null
-          transporter: string | null
-          vehicle_details: string | null
-          windows_dispatched: number
-        }
-        Insert: {
-          created_at?: string
-          dispatch_date?: string | null
-          entered_by?: string | null
-          id?: string
-          order_id: string
-          remarks?: string | null
-          transporter?: string | null
-          vehicle_details?: string | null
-          windows_dispatched?: number
-        }
-        Update: {
-          created_at?: string
-          dispatch_date?: string | null
-          entered_by?: string | null
-          id?: string
-          order_id?: string
-          remarks?: string | null
-          transporter?: string | null
-          vehicle_details?: string | null
-          windows_dispatched?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dispatch_logs_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       installation: {
         Row: {
           id: string
@@ -256,47 +212,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "installation_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      installation_logs: {
-        Row: {
-          created_at: string
-          entered_by: string | null
-          id: string
-          installation_date: string | null
-          order_id: string
-          remarks: string | null
-          site_supervisor: string | null
-          windows_installed: number
-        }
-        Insert: {
-          created_at?: string
-          entered_by?: string | null
-          id?: string
-          installation_date?: string | null
-          order_id: string
-          remarks?: string | null
-          site_supervisor?: string | null
-          windows_installed?: number
-        }
-        Update: {
-          created_at?: string
-          entered_by?: string | null
-          id?: string
-          installation_date?: string | null
-          order_id?: string
-          remarks?: string | null
-          site_supervisor?: string | null
-          windows_installed?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "installation_logs_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
@@ -428,39 +343,21 @@ export type Database = {
       orders: {
         Row: {
           advance_received: number
-          approval_for_dispatch: string
-          approval_for_production: string
           balance_amount: number
-          coated_extrusion_availability: string
-          coating_delivery_date: string | null
-          coating_status: string
           colour_shade: string | null
           commercial_status: string
           created_at: string
           created_by: string | null
           dealer_name: string
-          design_released_windows: number
-          design_remarks: string | null
           design_status: string
           dispatch_status: string
-          extrusion_availability: string
-          extrusion_delivery_date: string | null
-          extrusion_po_status: string
-          finance_remarks: string | null
           finance_status: string
-          glass_availability: string
-          glass_delivery_date: string | null
-          glass_po_status: string
-          hardware_availability: string
-          hardware_delivery_date: string | null
-          hardware_po_status: string
           id: string
           installation_status: string
           order_name: string
           order_type: string
           order_value: number
           other_product_type: string | null
-          procurement_remarks: string | null
           product_type: string
           quote_no: string | null
           rework_issue: string | null
@@ -468,9 +365,6 @@ export type Database = {
           sales_order_no: string | null
           salesperson: string | null
           sqft: number
-          store_remarks: string | null
-          survey_done_windows: number
-          survey_remarks: string | null
           survey_status: string
           total_windows: number
           updated_at: string | null
@@ -479,39 +373,21 @@ export type Database = {
         }
         Insert: {
           advance_received?: number
-          approval_for_dispatch?: string
-          approval_for_production?: string
           balance_amount?: number
-          coated_extrusion_availability?: string
-          coating_delivery_date?: string | null
-          coating_status?: string
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
           created_by?: string | null
           dealer_name?: string
-          design_released_windows?: number
-          design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
-          extrusion_availability?: string
-          extrusion_delivery_date?: string | null
-          extrusion_po_status?: string
-          finance_remarks?: string | null
           finance_status?: string
-          glass_availability?: string
-          glass_delivery_date?: string | null
-          glass_po_status?: string
-          hardware_availability?: string
-          hardware_delivery_date?: string | null
-          hardware_po_status?: string
           id?: string
           installation_status?: string
           order_name?: string
           order_type?: string
           order_value?: number
           other_product_type?: string | null
-          procurement_remarks?: string | null
           product_type?: string
           quote_no?: string | null
           rework_issue?: string | null
@@ -519,9 +395,6 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
-          store_remarks?: string | null
-          survey_done_windows?: number
-          survey_remarks?: string | null
           survey_status?: string
           total_windows?: number
           updated_at?: string | null
@@ -530,39 +403,21 @@ export type Database = {
         }
         Update: {
           advance_received?: number
-          approval_for_dispatch?: string
-          approval_for_production?: string
           balance_amount?: number
-          coated_extrusion_availability?: string
-          coating_delivery_date?: string | null
-          coating_status?: string
           colour_shade?: string | null
           commercial_status?: string
           created_at?: string
           created_by?: string | null
           dealer_name?: string
-          design_released_windows?: number
-          design_remarks?: string | null
           design_status?: string
           dispatch_status?: string
-          extrusion_availability?: string
-          extrusion_delivery_date?: string | null
-          extrusion_po_status?: string
-          finance_remarks?: string | null
           finance_status?: string
-          glass_availability?: string
-          glass_delivery_date?: string | null
-          glass_po_status?: string
-          hardware_availability?: string
-          hardware_delivery_date?: string | null
-          hardware_po_status?: string
           id?: string
           installation_status?: string
           order_name?: string
           order_type?: string
           order_value?: number
           other_product_type?: string | null
-          procurement_remarks?: string | null
           product_type?: string
           quote_no?: string | null
           rework_issue?: string | null
@@ -570,9 +425,6 @@ export type Database = {
           sales_order_no?: string | null
           salesperson?: string | null
           sqft?: number
-          store_remarks?: string | null
-          survey_done_windows?: number
-          survey_remarks?: string | null
           survey_status?: string
           total_windows?: number
           updated_at?: string | null
@@ -601,97 +453,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      payment_logs: {
-        Row: {
-          amount: number
-          confirmed_at: string | null
-          confirmed_by: string | null
-          created_at: string
-          entered_by: string | null
-          id: string
-          order_id: string
-          payment_date: string | null
-          payment_mode: string | null
-          source_module: string
-          status: string
-        }
-        Insert: {
-          amount?: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          entered_by?: string | null
-          id?: string
-          order_id: string
-          payment_date?: string | null
-          payment_mode?: string | null
-          source_module?: string
-          status?: string
-        }
-        Update: {
-          amount?: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          entered_by?: string | null
-          id?: string
-          order_id?: string
-          payment_date?: string | null
-          payment_mode?: string | null
-          source_module?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_logs_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_logs: {
-        Row: {
-          created_at: string
-          entered_by: string | null
-          entry_date: string
-          id: string
-          order_id: string
-          remarks: string | null
-          stage: string
-          windows_completed: number
-        }
-        Insert: {
-          created_at?: string
-          entered_by?: string | null
-          entry_date?: string
-          id?: string
-          order_id: string
-          remarks?: string | null
-          stage: string
-          windows_completed?: number
-        }
-        Update: {
-          created_at?: string
-          entered_by?: string | null
-          entry_date?: string
-          id?: string
-          order_id?: string
-          remarks?: string | null
-          stage?: string
-          windows_completed?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_logs_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       production_status: {
         Row: {
@@ -761,10 +522,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
-          invited_at: string | null
-          joined_at: string | null
           name: string
-          status: string
           user_id: string
         }
         Insert: {
@@ -772,10 +530,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-          invited_at?: string | null
-          joined_at?: string | null
           name?: string
-          status?: string
           user_id: string
         }
         Update: {
@@ -783,10 +538,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-          invited_at?: string | null
-          joined_at?: string | null
           name?: string
-          status?: string
           user_id?: string
         }
         Relationships: []
@@ -835,52 +587,34 @@ export type Database = {
       }
       rework_logs: {
         Row: {
-          cost: number | null
           id: string
-          issue_type: string | null
           order_id: string
           reported_at: string
           reported_by: string | null
-          reported_date: string | null
           resolved: boolean
           resolved_at: string | null
-          responsible_person: string | null
           rework_issue: string
           rework_qty: number
-          solution: string | null
-          status: string
         }
         Insert: {
-          cost?: number | null
           id?: string
-          issue_type?: string | null
           order_id: string
           reported_at?: string
           reported_by?: string | null
-          reported_date?: string | null
           resolved?: boolean
           resolved_at?: string | null
-          responsible_person?: string | null
           rework_issue: string
           rework_qty?: number
-          solution?: string | null
-          status?: string
         }
         Update: {
-          cost?: number | null
           id?: string
-          issue_type?: string | null
           order_id?: string
           reported_at?: string
           reported_by?: string | null
-          reported_date?: string | null
           resolved?: boolean
           resolved_at?: string | null
-          responsible_person?: string | null
           rework_issue?: string
           rework_qty?: number
-          solution?: string | null
-          status?: string
         }
         Relationships: [
           {
