@@ -10,9 +10,20 @@ import DashboardPage from "@/pages/DashboardPage";
 import OrdersDashboard from "@/pages/OrdersDashboard";
 import OrderDetailPage from "@/pages/OrderDetailPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
-import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
+import DispatchPage from "@/pages/DispatchPage";
+import InstallationPage from "@/pages/InstallationPage";
+import ReworkPage from "@/pages/ReworkPage";
+import SalesPage from "@/pages/SalesPage";
+import FinancePage from "@/pages/FinancePage";
+import SurveyPage from "@/pages/SurveyPage";
+import DesignPage from "@/pages/DesignPage";
+import StorePage from "@/pages/StorePage";
+import ProcurementPage from "@/pages/ProcurementPage";
 import SettingsPage from "@/pages/SettingsPage";
-import AdminSettingsPage from "@/pages/AdminSettingsPage";
+import GeneralSettingsPage from "@/pages/settings/GeneralSettingsPage";
+import MastersSettingsPage from "@/pages/settings/MastersSettingsPage";
+import ProductionSettingsPage from "@/pages/settings/ProductionSettingsPage";
+import WorkflowRulesPage from "@/pages/settings/WorkflowRulesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -27,21 +38,24 @@ function ProtectedRoutes() {
     <AppLayout>
       <Routes>
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/orders" element={<DepartmentQueuePage departmentKey="orders" />} />
-        <Route path="/sales" element={<OrdersDashboard />} />
+        <Route path="/orders" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/survey" element={<DepartmentQueuePage departmentKey="survey" />} />
-        <Route path="/finance" element={<DepartmentQueuePage departmentKey="finance" />} />
-        <Route path="/design" element={<DepartmentQueuePage departmentKey="design" />} />
-        <Route path="/procurement" element={<DepartmentQueuePage departmentKey="procurement" />} />
+        <Route path="/sales" element={<SalesPage />} />
+        <Route path="/survey" element={<SurveyPage />} />
+        <Route path="/finance" element={<FinancePage />} />
+        <Route path="/design" element={<DesignPage />} />
+        <Route path="/procurement" element={<ProcurementPage />} />
         <Route path="/production" element={<ProductionDashboard />} />
-        <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
-        <Route path="/dispatch" element={<DepartmentQueuePage departmentKey="dispatch" />} />
-        <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
-        <Route path="/rework" element={<DepartmentQueuePage departmentKey="rework" />} />
-        <Route path="/store" element={<DepartmentQueuePage departmentKey="store" />} />
+        {/* Quality removed — handled inside Production */}
+        <Route path="/dispatch" element={<DispatchPage />} />
+        <Route path="/installation" element={<InstallationPage />} />
+        <Route path="/rework" element={<ReworkPage />} />
+        <Route path="/store" element={<StorePage />} />
         <Route path="/settings" element={<SettingsPage />}>
-          <Route index element={<AdminSettingsPage />} />
+          <Route index element={<GeneralSettingsPage />} />
+          <Route path="masters" element={<MastersSettingsPage />} />
+          <Route path="production" element={<ProductionSettingsPage />} />
+          <Route path="workflow" element={<WorkflowRulesPage />} />
           <Route path="users" element={<UserManagementPage />} />
         </Route>
         {/* Legacy redirects */}
