@@ -111,8 +111,8 @@ export default function FinancePage() {
         o.approval_for_dispatch === "Pending" ||
         draftOrderIds.has(o.id);
     }
-    if (tab === "production") return o.approval_for_production !== "Approved";
-    if (tab === "dispatch") return o.approval_for_dispatch !== "Approved";
+    if (tab === "production") return o.approval_for_production === "Approved";
+    if (tab === "dispatch") return o.approval_for_dispatch === "Approved";
     return true;
   });
 
