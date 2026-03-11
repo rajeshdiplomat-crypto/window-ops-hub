@@ -27,6 +27,12 @@ interface ReworkSummary {
   latest_issue: string | null;
 }
 
+interface PaymentLog {
+  order_id: string;
+  amount: number;
+  status: string;
+}
+
 interface Order {
   id: string;
   order_type: string;
@@ -80,6 +86,7 @@ const emptyFilters: Filters = {
 export default function OrdersDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reworkMap, setReworkMap] = useState<Record<string, ReworkSummary>>({});
+  const [paymentMap, setPaymentMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -98,9 +105,10 @@ export default function OrdersDashboard() {
   const canEdit = hasRole("sales") || hasRole("admin") || hasRole("management");
 
   const fetchOrders = async () => {
-    const [ordersRes, reworkRes] = await Promise.all([
+    const [ordersRes, reworkRes, paymentsRes] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       (supabase.from("rework_logs" as any) as any).select("order_id, rework_qty, rework_issue, reported_at").order("reported_at", { ascending: false }),
+      (supabase.from("payment_logs" as any) as any).select("order_id, amount, status"),
     ]);
     if (ordersRes.error) toast.error("Failed to load orders");
     else setOrders((ordersRes.data as unknown as Order[]) || []);
@@ -115,6 +123,16 @@ export default function OrdersDashboard() {
       map[log.order_id].total_qty += log.rework_qty;
     }
     setReworkMap(map);
+
+    // Build payment map (confirmed only)
+    const paymentLogs = (paymentsRes.data || []) as PaymentLog[];
+    const pMap: Record<string, number> = {};
+    for (const p of paymentLogs) {
+      if (p.status === "Confirmed") {
+        pMap[p.order_id] = (pMap[p.order_id] || 0) + Number(p.amount);
+      }
+    }
+    setPaymentMap(pMap);
     setLoading(false);
   };
 
@@ -285,6 +303,8 @@ export default function OrdersDashboard() {
             ) : (
               filtered.map((order) => {
                 const rework = reworkMap[order.id];
+                const receipt = paymentMap[order.id] || 0;
+                const balance = Number(order.order_value) - receipt;
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/50">
                     <TableCell><Badge variant="outline" className="text-xs">{order.order_type}</Badge></TableCell>
@@ -301,8 +321,8 @@ export default function OrdersDashboard() {
                     <TableCell className="text-right">{order.windows_released}</TableCell>
                     <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
                     <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">₹{Number(order.advance_received).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">₹{Number(order.balance_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{receipt.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{balance.toLocaleString()}</TableCell>
                     <TableCell className="text-right">{rework && rework.total_qty > 0 ? rework.total_qty : "—"}</TableCell>
                     <TableCell className="text-sm max-w-[120px] truncate" title={rework?.latest_issue || ""}>{rework?.latest_issue || "—"}</TableCell>
                     <TableCell><Badge variant="outline" className={dispatchColor(order.dispatch_status)}>{order.dispatch_status}</Badge></TableCell>
