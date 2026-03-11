@@ -105,9 +105,10 @@ export default function OrdersDashboard() {
   const canEdit = hasRole("sales") || hasRole("admin") || hasRole("management");
 
   const fetchOrders = async () => {
-    const [ordersRes, reworkRes] = await Promise.all([
+    const [ordersRes, reworkRes, paymentsRes] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       (supabase.from("rework_logs" as any) as any).select("order_id, rework_qty, rework_issue, reported_at").order("reported_at", { ascending: false }),
+      (supabase.from("payment_logs" as any) as any).select("order_id, amount, status"),
     ]);
     if (ordersRes.error) toast.error("Failed to load orders");
     else setOrders((ordersRes.data as unknown as Order[]) || []);
@@ -122,6 +123,16 @@ export default function OrdersDashboard() {
       map[log.order_id].total_qty += log.rework_qty;
     }
     setReworkMap(map);
+
+    // Build payment map (confirmed only)
+    const paymentLogs = (paymentsRes.data || []) as PaymentLog[];
+    const pMap: Record<string, number> = {};
+    for (const p of paymentLogs) {
+      if (p.status === "Confirmed") {
+        pMap[p.order_id] = (pMap[p.order_id] || 0) + Number(p.amount);
+      }
+    }
+    setPaymentMap(pMap);
     setLoading(false);
   };
 
