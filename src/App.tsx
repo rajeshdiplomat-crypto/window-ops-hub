@@ -14,6 +14,8 @@ import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
 import FinancePage from "@/pages/FinancePage";
 import SurveyPage from "@/pages/SurveyPage";
 import DesignPage from "@/pages/DesignPage";
+import StorePage from "@/pages/StorePage";
+import ProcurementPage from "@/pages/ProcurementPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import UserManagementPage from "@/pages/UserManagementPage";
