@@ -187,6 +187,50 @@ export type Database = {
           },
         ]
       }
+      dispatch_logs: {
+        Row: {
+          created_at: string
+          dispatch_date: string | null
+          entered_by: string | null
+          id: string
+          order_id: string
+          remarks: string | null
+          transporter: string | null
+          vehicle_details: string | null
+          windows_dispatched: number
+        }
+        Insert: {
+          created_at?: string
+          dispatch_date?: string | null
+          entered_by?: string | null
+          id?: string
+          order_id: string
+          remarks?: string | null
+          transporter?: string | null
+          vehicle_details?: string | null
+          windows_dispatched?: number
+        }
+        Update: {
+          created_at?: string
+          dispatch_date?: string | null
+          entered_by?: string | null
+          id?: string
+          order_id?: string
+          remarks?: string | null
+          transporter?: string | null
+          vehicle_details?: string | null
+          windows_dispatched?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       installation: {
         Row: {
           id: string
@@ -560,6 +604,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payment_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_logs: {
+        Row: {
+          created_at: string
+          entered_by: string | null
+          entry_date: string
+          id: string
+          order_id: string
+          remarks: string | null
+          stage: string
+          windows_completed: number
+        }
+        Insert: {
+          created_at?: string
+          entered_by?: string | null
+          entry_date?: string
+          id?: string
+          order_id: string
+          remarks?: string | null
+          stage: string
+          windows_completed?: number
+        }
+        Update: {
+          created_at?: string
+          entered_by?: string | null
+          entry_date?: string
+          id?: string
+          order_id?: string
+          remarks?: string | null
+          stage?: string
+          windows_completed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_logs_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
