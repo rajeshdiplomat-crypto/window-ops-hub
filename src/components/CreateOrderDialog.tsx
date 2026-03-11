@@ -32,8 +32,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
   const [soNo, setSoNo] = useState("");
   const [colourShade, setColourShade] = useState("");
   const [salesperson, setSalesperson] = useState("");
-  const [productType, setProductType] = useState<"Windows" | "Others">("Windows");
-  const [otherProductType, setOtherProductType] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [qty, setQty] = useState("");
   const [sqft, setSqft] = useState("");
   const [orderValue, setOrderValue] = useState("");
