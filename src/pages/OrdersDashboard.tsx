@@ -86,6 +86,7 @@ const emptyFilters: Filters = {
 export default function OrdersDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reworkMap, setReworkMap] = useState<Record<string, ReworkSummary>>({});
+  const [paymentMap, setPaymentMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
