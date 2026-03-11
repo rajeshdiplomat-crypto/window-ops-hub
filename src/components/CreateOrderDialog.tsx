@@ -46,7 +46,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
   const [projectClients, setProjectClients] = useState<SettingsItem[]>([]);
   const [colourShades, setColourShades] = useState<SettingsItem[]>([]);
   const [salespersons, setSalespersons] = useState<SettingsItem[]>([]);
-  const [otherProductTypes, setOtherProductTypes] = useState<SettingsItem[]>([]);
+  const [products, setProducts] = useState<SettingsItem[]>([]);
 
   useEffect(() => {
     if (!open) return;
