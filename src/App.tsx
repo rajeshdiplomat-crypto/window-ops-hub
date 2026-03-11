@@ -13,7 +13,7 @@ import ProductionDashboard from "@/pages/ProductionDashboard";
 import DispatchPage from "@/pages/DispatchPage";
 import InstallationPage from "@/pages/InstallationPage";
 import ReworkPage from "@/pages/ReworkPage";
-import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
+import SalesPage from "@/pages/SalesPage";
 import FinancePage from "@/pages/FinancePage";
 import SurveyPage from "@/pages/SurveyPage";
 import DesignPage from "@/pages/DesignPage";
@@ -40,7 +40,7 @@ function ProtectedRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/orders" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/sales" element={<DepartmentQueuePage departmentKey="sales" />} />
+        <Route path="/sales" element={<SalesPage />} />
         <Route path="/survey" element={<SurveyPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/design" element={<DesignPage />} />
