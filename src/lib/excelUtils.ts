@@ -126,8 +126,7 @@ export function exportOrdersToExcel(orders: Record<string, any>[], filename = "o
     "Order Value": o.order_value || 0,
     "Receipt": o.advance_received || 0,
     "Balance": o.balance_amount || 0,
-    "Rework Qty": o.rework_qty || 0,
-    "Rework Issue": o.rework_issue || "",
+    "Dispatch Status": o.dispatch_status || "Not Dispatched",
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportRows, { header: EXPORT_HEADERS });
