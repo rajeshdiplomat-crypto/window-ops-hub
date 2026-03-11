@@ -14,24 +14,32 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Plus, Upload, Download, FileSpreadsheet, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate } from "@/lib/excelUtils";
+import CreateOrderDialog from "@/components/CreateOrderDialog";
+import EditOrderDialog from "@/components/EditOrderDialog";
 
 interface Order {
   id: string;
+  order_type: string;
   order_name: string;
   quote_no: string | null;
   sales_order_no: string | null;
   dealer_name: string;
   salesperson: string | null;
   product_type: string;
+  other_product_type: string | null;
   colour_shade: string | null;
   total_windows: number;
+  sqft: number;
   order_value: number;
   advance_received: number;
   balance_amount: number;
   commercial_status: string;
   dispatch_status: string;
+  survey_done_windows: number;
+  design_released_windows: number;
 }
 
 interface ReworkInfo {
@@ -40,9 +48,20 @@ interface ReworkInfo {
 }
 
 const commercialColor = (status: string) => {
-  if (status === "Order Confirmed") return "bg-success/15 text-success border-success/20";
+  if (status === "Order Confirmed" || status === "Confirmed") return "bg-success/15 text-success border-success/20";
   if (status === "Pipeline" || status === "pending") return "bg-warning/15 text-warning border-warning/20";
   return "bg-muted text-muted-foreground";
+};
+
+const dispatchColor = (status: string) => {
+  if (status === "Fully Dispatched") return "bg-success/15 text-success border-success/20";
+  if (status === "Partially Dispatched") return "bg-warning/15 text-warning border-warning/20";
+  return "bg-muted text-muted-foreground";
+};
+
+const typeColor = (type: string) => {
+  if (type === "Project") return "bg-primary/15 text-primary border-primary/20";
+  return "bg-accent text-accent-foreground";
 };
 
 interface Filters {
@@ -56,6 +75,7 @@ const emptyFilters: Filters = { salesperson: "", orderOwner: "", commercialStatu
 export default function SalesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reworkMap, setReworkMap] = useState<Record<string, ReworkInfo>>({});
+  const [receiptMap, setReceiptMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -65,23 +85,37 @@ export default function SalesPage() {
   const [owners, setOwners] = useState<string[]>([]);
   const [commercialStatuses, setCommercialStatuses] = useState<string[]>([]);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOrderId, setEditOrderId] = useState<string | null>(null);
+
   const fetchData = async () => {
-    const [ordersRes, reworkRes] = await Promise.all([
+    const [ordersRes, reworkRes, paymentRes] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       supabase.from("rework_logs").select("order_id, rework_qty, rework_issue, reported_at").order("reported_at", { ascending: false }),
+      supabase.from("payment_logs").select("order_id, amount").eq("status", "Confirmed"),
     ]);
     if (ordersRes.error) toast.error("Failed to load orders");
     else setOrders((ordersRes.data as unknown as Order[]) || []);
 
+    // Rework map
     const logs = reworkRes.data || [];
-    const map: Record<string, ReworkInfo> = {};
+    const rMap: Record<string, ReworkInfo> = {};
     for (const log of logs) {
-      if (!map[log.order_id]) {
-        map[log.order_id] = { totalQty: 0, latestIssue: log.rework_issue };
+      if (!rMap[log.order_id]) {
+        rMap[log.order_id] = { totalQty: 0, latestIssue: log.rework_issue };
       }
-      map[log.order_id].totalQty += Number(log.rework_qty);
+      rMap[log.order_id].totalQty += Number(log.rework_qty);
     }
-    setReworkMap(map);
+    setReworkMap(rMap);
+
+    // Receipt map (sum of confirmed payments)
+    const payments = paymentRes.data || [];
+    const pMap: Record<string, number> = {};
+    for (const p of payments) {
+      pMap[p.order_id] = (pMap[p.order_id] || 0) + Number(p.amount);
+    }
+    setReceiptMap(pMap);
+
     setLoading(false);
   };
 
@@ -121,11 +155,57 @@ export default function SalesPage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  const handleImport = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls,.csv";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const result = await importOrdersFromFile(file);
+      if (result) {
+        toast.success(`Imported: ${result.created} created, ${result.updated} updated`);
+        fetchData();
+      }
+    };
+    input.click();
+  };
+
+  const handleExport = async () => {
+    await exportOrdersToExcel(orders as any);
+  };
+
+  // Compute "Available to Work" = survey_done - design_released (simplistic)
+  const getAvlToWork = (o: Order) => {
+    return Math.max(0, o.survey_done_windows - o.design_released_windows);
+  };
+
+  const getProductDisplay = (o: Order) => {
+    if (o.other_product_type) return `${o.product_type}, ${o.other_product_type}`;
+    return o.product_type;
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Sales</h1>
-        <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sales</h1>
+          <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => downloadImportTemplate()}>
+            <FileSpreadsheet className="h-4 w-4" /> Template
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleImport}>
+            <Upload className="h-4 w-4" /> Import
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> New Order
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -173,56 +253,80 @@ export default function SalesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[100px]">Quotation No</TableHead>
-              <TableHead className="min-w-[90px]">SO No</TableHead>
+              <TableHead className="min-w-[60px]">Type</TableHead>
               <TableHead className="min-w-[140px]">Order Name</TableHead>
-              <TableHead className="min-w-[120px]">Dealer</TableHead>
+              <TableHead className="min-w-[120px]">Owner</TableHead>
+              <TableHead className="min-w-[130px]">Quotation No</TableHead>
+              <TableHead className="min-w-[70px]">SO No</TableHead>
+              <TableHead className="min-w-[80px]">Shade</TableHead>
               <TableHead className="min-w-[100px]">Salesperson</TableHead>
-              <TableHead className="min-w-[100px]">Product Type</TableHead>
-              <TableHead className="min-w-[90px]">Shade</TableHead>
+              <TableHead className="min-w-[120px]">Product Type</TableHead>
               <TableHead className="text-right min-w-[70px]">Windows</TableHead>
+              <TableHead className="text-right min-w-[80px]">Avl to Work</TableHead>
+              <TableHead className="text-right min-w-[60px]">Sqft</TableHead>
               <TableHead className="text-right min-w-[90px]">Order Value</TableHead>
-              <TableHead className="text-right min-w-[80px]">Advance</TableHead>
+              <TableHead className="text-right min-w-[80px]">Receipt</TableHead>
               <TableHead className="text-right min-w-[80px]">Balance</TableHead>
-              <TableHead className="min-w-[130px]">Commercial Status</TableHead>
-              <TableHead className="text-right min-w-[80px]">Rework Qty</TableHead>
-              <TableHead className="min-w-[150px]">Latest Rework Issue</TableHead>
+              <TableHead className="text-right min-w-[80px]">Rework Total</TableHead>
+              <TableHead className="min-w-[130px]">Latest Issue</TableHead>
+              <TableHead className="min-w-[120px]">Dispatch Status</TableHead>
+              <TableHead className="min-w-[110px]">Commercial</TableHead>
+              <TableHead className="w-[40px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={19} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
+                <TableCell colSpan={19} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
               </TableRow>
             ) : (
               filtered.map((order) => {
                 const rework = reworkMap[order.id];
+                const receipt = receiptMap[order.id] || order.advance_received;
+                const balance = order.order_value - receipt;
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/50">
-                    <TableCell className="text-sm">{order.quote_no || "—"}</TableCell>
-                    <TableCell className="text-sm">{order.sales_order_no || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={typeColor(order.order_type)}>
+                        {order.order_type}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">{order.order_name}</Link>
                     </TableCell>
                     <TableCell className="text-sm">{order.dealer_name}</TableCell>
-                    <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
-                    <TableCell className="text-sm">{order.product_type}</TableCell>
+                    <TableCell className="text-sm">{order.quote_no || "—"}</TableCell>
+                    <TableCell className="text-sm">{order.sales_order_no || "—"}</TableCell>
                     <TableCell className="text-sm">{order.colour_shade || "—"}</TableCell>
+                    <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
+                    <TableCell className="text-sm">{getProductDisplay(order)}</TableCell>
                     <TableCell className="text-right">{order.total_windows}</TableCell>
+                    <TableCell className="text-right">{getAvlToWork(order)}</TableCell>
+                    <TableCell className="text-right">{order.sqft}</TableCell>
                     <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">₹{Number(order.advance_received).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">₹{Number(order.balance_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{Number(receipt).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹{Number(balance).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{rework?.totalQty || 0}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-[180px]">{rework?.latestIssue || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={dispatchColor(order.dispatch_status)}>
+                        {order.dispatch_status}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={commercialColor(order.commercial_status)}>
                         {order.commercial_status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{rework?.totalQty || 0}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">{rework?.latestIssue || "—"}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditOrderId(order.id)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -230,6 +334,16 @@ export default function SalesPage() {
           </TableBody>
         </Table>
       </div>
+
+      <CreateOrderDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={fetchData} />
+      {editOrderId && (
+        <EditOrderDialog
+          order={orders.find((o) => o.id === editOrderId)}
+          open={!!editOrderId}
+          onOpenChange={(open) => { if (!open) setEditOrderId(null); }}
+          onUpdated={fetchData}
+        />
+      )}
     </div>
   );
 }
