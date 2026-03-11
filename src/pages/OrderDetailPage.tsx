@@ -16,6 +16,7 @@ import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
 import { checkMaterialDependency } from "@/lib/nextActions";
 import ReworkSection from "@/components/ReworkSection";
+import FinanceSection from "@/components/FinanceSection";
 import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
