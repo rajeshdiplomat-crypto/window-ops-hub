@@ -15,6 +15,8 @@ import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusCon
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
 import { checkMaterialDependency } from "@/lib/nextActions";
+import ReworkSection from "@/components/ReworkSection";
+import { logActivity } from "@/lib/activityLog";
 
 const STAGES = ["cutting", "assembly", "glazing", "qc", "packing"] as const;
 const STAGE_LABELS: Record<string, string> = {
