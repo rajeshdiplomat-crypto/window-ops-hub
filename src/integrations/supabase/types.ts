@@ -761,7 +761,10 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          invited_at: string | null
+          joined_at: string | null
           name: string
+          status: string
           user_id: string
         }
         Insert: {
@@ -769,7 +772,10 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          invited_at?: string | null
+          joined_at?: string | null
           name?: string
+          status?: string
           user_id: string
         }
         Update: {
@@ -777,7 +783,10 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          invited_at?: string | null
+          joined_at?: string | null
           name?: string
+          status?: string
           user_id?: string
         }
         Relationships: []
