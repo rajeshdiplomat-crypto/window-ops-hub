@@ -32,60 +32,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const navSections = [
-  {
-    label: "OVERVIEW",
-    items: [
-      { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-      { label: "Orders", icon: Package, path: "/orders" },
-    ],
-  },
-  {
-    label: "COMMERCIAL",
-    items: [
-      { label: "Sales", icon: Package, path: "/sales" },
-      { label: "Finance", icon: DollarSign, path: "/finance" },
-    ],
-  },
-  {
-    label: "ENGINEERING",
-    items: [
-      { label: "Survey", icon: Eye, path: "/survey" },
-      { label: "Design", icon: Paintbrush, path: "/design" },
-    ],
-  },
-  {
-    label: "MATERIALS",
-    items: [
-      { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
-      { label: "Store", icon: Warehouse, path: "/store" },
-    ],
-  },
-  {
-    label: "MANUFACTURING",
-    items: [
-      { label: "Production", icon: Factory, path: "/production" },
-    ],
-  },
-  {
-    label: "DELIVERY",
-    items: [
-      { label: "Dispatch", icon: Truck, path: "/dispatch" },
-      { label: "Installation", icon: Wrench, path: "/installation" },
-    ],
-  },
-  {
-    label: "ISSUES",
-    items: [
-      { label: "Rework", icon: RefreshCw, path: "/rework" },
-    ],
-  },
-  {
-    label: "SYSTEM",
-    items: [
-      { label: "Settings", icon: Settings, path: "/settings" },
-    ],
-  },
+const navItems = [
+  { label: "Dashboard", icon: LayoutDashboard, path: "/", group: 0 },
+  { label: "Orders", icon: Package, path: "/orders", group: 0 },
+  { label: "Sales", icon: Package, path: "/sales", group: 1 },
+  { label: "Finance", icon: DollarSign, path: "/finance", group: 1 },
+  { label: "Survey", icon: Eye, path: "/survey", group: 2 },
+  { label: "Design", icon: Paintbrush, path: "/design", group: 2 },
+  { label: "Procurement", icon: ShoppingCart, path: "/procurement", group: 3 },
+  { label: "Store", icon: Warehouse, path: "/store", group: 3 },
+  { label: "Production", icon: Factory, path: "/production", group: 4 },
+  { label: "Dispatch", icon: Truck, path: "/dispatch", group: 5 },
+  { label: "Installation", icon: Wrench, path: "/installation", group: 5 },
+  { label: "Rework", icon: RefreshCw, path: "/rework", group: 6 },
+  { label: "Settings", icon: Settings, path: "/settings", group: 7 },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
