@@ -180,6 +180,7 @@ export default function AdminSettingsPage() {
         <ConfigList table="project_client_names" title="Project Client Names" />
         <ConfigList table="colour_shades" title="Colour Shades" />
         <ConfigList table="other_product_types" title="Products" />
+        <ConfigList table="commercial_statuses" title="Commercial Statuses" />
         <ConfigList table="coating_vendors" title="Coating Vendors" />
         <ConfigList table="production_units" title="Production Units" />
 
