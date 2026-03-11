@@ -81,9 +81,9 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
       continue;
     }
 
-    // Windows validation
-    if ((record.product_type || "Windows") === "Windows" && record.total_windows !== undefined && record.total_windows <= 0) {
-      result.errors.push(`Row ${i + 2}: Windows orders must have Qty > 0`);
+    // Product type is now a comma-separated list of products
+    if (!record.product_type) {
+      result.errors.push(`Row ${i + 2}: Product Type is required`);
       continue;
     }
 
