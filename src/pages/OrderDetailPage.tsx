@@ -221,10 +221,12 @@ export default function OrderDetailPage() {
       </div>
 
       <Tabs defaultValue="statuses">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="survey">Survey</TabsTrigger>
           <TabsTrigger value="finance">Finance</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
           <TabsTrigger value="dispatch">Dispatch</TabsTrigger>
