@@ -113,7 +113,6 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
     }
     if (!record.dealer_name) record.dealer_name = "";
     if (!record.order_type) record.order_type = "Retail";
-    if (!record.product_type) record.product_type = "Windows";
 
     const { error } = await supabase.from("orders").insert(record);
     if (error) result.errors.push(`Row ${i + 2}: ${error.message}`);
