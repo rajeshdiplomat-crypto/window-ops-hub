@@ -88,6 +88,27 @@ const navSections = [
   },
 ];
 
+export default function AppLayout({ children }: { children: ReactNode }) {
+  const { user, signOut } = useAuth();
+  const location = useLocation();
+  const [profileName, setProfileName] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setProfileName(data.name);
+      });
+  }, [user]);
+
+  const initials = profileName
+    ? profileName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
+    : (user?.email?.slice(0, 2).toUpperCase() || "U");
+
   const renderLink = (path: string, label: string, Icon: any) => {
     const active = location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
     return (
