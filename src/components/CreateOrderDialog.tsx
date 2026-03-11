@@ -94,7 +94,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
 
     // Validations
     if (!orderName.trim()) return toast.error("Order Name is required");
-    if (productType === "Windows" && (Number(qty) || 0) <= 0) return toast.error("Number of Windows must be > 0");
+    if (selectedProducts.length === 0) return toast.error("Select at least one product");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
 
     // Quotation number uniqueness check
