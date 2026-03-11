@@ -13,7 +13,7 @@ import {
   DollarSign,
   Paintbrush,
   ShoppingCart,
-  ClipboardCheck,
+  
   Truck,
   Wrench,
   Warehouse,
@@ -32,20 +32,60 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Orders", icon: Package, path: "/orders" },
-  { label: "Sales", icon: Package, path: "/sales" },
-  { label: "Survey", icon: Eye, path: "/survey" },
-  { label: "Finance", icon: DollarSign, path: "/finance" },
-  { label: "Design", icon: Paintbrush, path: "/design" },
-  { label: "Store", icon: Warehouse, path: "/store" },
-  { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
-  { label: "Production", icon: Factory, path: "/production" },
-  { label: "Quality", icon: ClipboardCheck, path: "/quality" },
-  { label: "Dispatch", icon: Truck, path: "/dispatch" },
-  { label: "Installation", icon: Wrench, path: "/installation" },
-  { label: "Rework", icon: RefreshCw, path: "/rework" },
+const navSections = [
+  {
+    label: "OVERVIEW",
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+      { label: "Orders", icon: Package, path: "/orders" },
+    ],
+  },
+  {
+    label: "COMMERCIAL",
+    items: [
+      { label: "Sales", icon: Package, path: "/sales" },
+      { label: "Finance", icon: DollarSign, path: "/finance" },
+    ],
+  },
+  {
+    label: "ENGINEERING",
+    items: [
+      { label: "Survey", icon: Eye, path: "/survey" },
+      { label: "Design", icon: Paintbrush, path: "/design" },
+    ],
+  },
+  {
+    label: "MATERIALS",
+    items: [
+      { label: "Procurement", icon: ShoppingCart, path: "/procurement" },
+      { label: "Store", icon: Warehouse, path: "/store" },
+    ],
+  },
+  {
+    label: "MANUFACTURING",
+    items: [
+      { label: "Production", icon: Factory, path: "/production" },
+    ],
+  },
+  {
+    label: "DELIVERY",
+    items: [
+      { label: "Dispatch", icon: Truck, path: "/dispatch" },
+      { label: "Installation", icon: Wrench, path: "/installation" },
+    ],
+  },
+  {
+    label: "ISSUES",
+    items: [
+      { label: "Rework", icon: RefreshCw, path: "/rework" },
+    ],
+  },
+  {
+    label: "SYSTEM",
+    items: [
+      { label: "Settings", icon: Settings, path: "/settings" },
+    ],
+  },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -94,10 +134,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
           <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
         </div>
-        <nav className="flex-1 space-y-1 overflow-auto p-2">
-          {navItems.map((item) => renderLink(item.path, item.label, item.icon))}
-          <Separator className="my-2 bg-sidebar-border" />
-          {renderLink("/settings", "Settings", Settings)}
+        <nav className="flex-1 overflow-auto p-2 space-y-3">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                {section.label}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => renderLink(item.path, item.label, item.icon))}
+              </div>
+            </div>
+          ))}
         </nav>
       </aside>
 
