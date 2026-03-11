@@ -244,43 +244,29 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
             {/* RIGHT COLUMN - Commercial Data */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Product Type</Label>
-                <RadioGroup
-                  value={productType}
-                  onValueChange={(v) => setProductType(v as "Windows" | "Others")}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="Windows" id="pt-windows" />
-                    <Label htmlFor="pt-windows" className="text-sm cursor-pointer">Windows</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value="Others" id="pt-others" />
-                    <Label htmlFor="pt-others" className="text-sm cursor-pointer">Others</Label>
-                  </div>
-                </RadioGroup>
+                <Label className="text-sm font-medium">Products *</Label>
+                <div className="flex flex-wrap gap-3">
+                  {products.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={selectedProducts.includes(p.name)}
+                        onCheckedChange={(checked) => {
+                          setSelectedProducts((prev) =>
+                            checked ? [...prev, p.name] : prev.filter((n) => n !== p.name)
+                          );
+                        }}
+                      />
+                      <span className="text-sm">{p.name}</span>
+                    </label>
+                  ))}
+                  {products.length === 0 && (
+                    <span className="text-sm text-muted-foreground">No products configured in Settings</span>
+                  )}
+                </div>
               </div>
 
-              {productType === "Others" && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Other Product Type</Label>
-                  <Select value={otherProductType} onValueChange={setOtherProductType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {otherProductTypes.map((t) => (
-                        <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
               <div className="space-y-1.5">
-                <Label className="text-sm">
-                  {productType === "Windows" ? "No. of Windows *" : "Qty"}
-                </Label>
+                <Label className="text-sm">Qty</Label>
                 <Input
                   type="number"
                   value={qty}
