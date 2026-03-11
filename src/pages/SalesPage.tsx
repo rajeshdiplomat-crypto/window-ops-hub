@@ -338,7 +338,7 @@ export default function SalesPage() {
       <CreateOrderDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={fetchData} />
       {editOrderId && (
         <EditOrderDialog
-          orderId={editOrderId}
+          order={orders.find((o) => o.id === editOrderId)}
           open={!!editOrderId}
           onOpenChange={(open) => { if (!open) setEditOrderId(null); }}
           onUpdated={fetchData}
