@@ -263,6 +263,47 @@ export type Database = {
           },
         ]
       }
+      installation_logs: {
+        Row: {
+          created_at: string
+          entered_by: string | null
+          id: string
+          installation_date: string | null
+          order_id: string
+          remarks: string | null
+          site_supervisor: string | null
+          windows_installed: number
+        }
+        Insert: {
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          installation_date?: string | null
+          order_id: string
+          remarks?: string | null
+          site_supervisor?: string | null
+          windows_installed?: number
+        }
+        Update: {
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          installation_date?: string | null
+          order_id?: string
+          remarks?: string | null
+          site_supervisor?: string | null
+          windows_installed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_status: {
         Row: {
           aluminium_expected_date: string | null
@@ -785,34 +826,52 @@ export type Database = {
       }
       rework_logs: {
         Row: {
+          cost: number | null
           id: string
+          issue_type: string | null
           order_id: string
           reported_at: string
           reported_by: string | null
+          reported_date: string | null
           resolved: boolean
           resolved_at: string | null
+          responsible_person: string | null
           rework_issue: string
           rework_qty: number
+          solution: string | null
+          status: string
         }
         Insert: {
+          cost?: number | null
           id?: string
+          issue_type?: string | null
           order_id: string
           reported_at?: string
           reported_by?: string | null
+          reported_date?: string | null
           resolved?: boolean
           resolved_at?: string | null
+          responsible_person?: string | null
           rework_issue: string
           rework_qty?: number
+          solution?: string | null
+          status?: string
         }
         Update: {
+          cost?: number | null
           id?: string
+          issue_type?: string | null
           order_id?: string
           reported_at?: string
           reported_by?: string | null
+          reported_date?: string | null
           resolved?: boolean
           resolved_at?: string | null
+          responsible_person?: string | null
           rework_issue?: string
           rework_qty?: number
+          solution?: string | null
+          status?: string
         }
         Relationships: [
           {

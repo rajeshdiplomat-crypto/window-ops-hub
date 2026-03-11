@@ -11,6 +11,8 @@ import OrdersDashboard from "@/pages/OrdersDashboard";
 import OrderDetailPage from "@/pages/OrderDetailPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
 import DispatchPage from "@/pages/DispatchPage";
+import InstallationPage from "@/pages/InstallationPage";
+import ReworkPage from "@/pages/ReworkPage";
 import DepartmentQueuePage from "@/pages/DepartmentQueuePage";
 import FinancePage from "@/pages/FinancePage";
 import SurveyPage from "@/pages/SurveyPage";
@@ -43,8 +45,8 @@ function ProtectedRoutes() {
         <Route path="/production" element={<ProductionDashboard />} />
         <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
         <Route path="/dispatch" element={<DispatchPage />} />
-        <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
-        <Route path="/rework" element={<DepartmentQueuePage departmentKey="rework" />} />
+        <Route path="/installation" element={<InstallationPage />} />
+        <Route path="/rework" element={<ReworkPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/settings" element={<SettingsPage />}>
           <Route index element={<AdminSettingsPage />} />

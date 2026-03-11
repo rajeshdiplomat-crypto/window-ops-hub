@@ -15,6 +15,7 @@ import { STATUS_OPTIONS, STATUS_LABELS, type StatusField } from "@/lib/statusCon
 import { logAuditEntry } from "@/lib/auditLog";
 import { triggerStatusNotification } from "@/lib/notifications";
 import ReworkSection from "@/components/ReworkSection";
+import InstallationSection from "@/components/InstallationSection";
 import FinanceSection from "@/components/FinanceSection";
 import SurveySection from "@/components/SurveySection";
 import DesignSection from "@/components/DesignSection";
@@ -191,54 +192,7 @@ export default function OrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="installation" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Installation</CardTitle>
-              {!installation && (
-                <Button size="sm" onClick={async () => {
-                  await supabase.from("installation").insert({ order_id: id });
-                  fetchAll();
-                }}>Initialize</Button>
-              )}
-            </CardHeader>
-            {installation && (
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Planned Date</Label>
-                    <Input type="date" defaultValue={installation.installation_planned || ""} onBlur={async (e) => {
-                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_planned", oldValue: installation.installation_planned, newValue: e.target.value || null });
-                      await supabase.from("installation").update({ installation_planned: e.target.value || null }).eq("id", installation.id);
-                      fetchAll();
-                    }} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Completed Date</Label>
-                    <Input type="date" defaultValue={installation.installation_completed || ""} onBlur={async (e) => {
-                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_completed", oldValue: installation.installation_completed, newValue: e.target.value || null });
-                      await supabase.from("installation").update({ installation_completed: e.target.value || null }).eq("id", installation.id);
-                      fetchAll();
-                    }} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Installation Status</Label>
-                    <Select value={installation.installation_status} onValueChange={async (val) => {
-                      await logAuditEntry({ entityType: "installation", entityId: installation.id, field: "installation_status", oldValue: installation.installation_status, newValue: val });
-                      await supabase.from("installation").update({ installation_status: val }).eq("id", installation.id);
-                      fetchAll();
-                    }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {INSTALLATION_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+          <InstallationSection orderId={id!} order={order} onRefresh={fetchAll} />
         </TabsContent>
         <TabsContent value="rework" className="mt-4">
           <ReworkSection orderId={id!} />
