@@ -20,7 +20,10 @@ import DesignPage from "@/pages/DesignPage";
 import StorePage from "@/pages/StorePage";
 import ProcurementPage from "@/pages/ProcurementPage";
 import SettingsPage from "@/pages/SettingsPage";
-import AdminSettingsPage from "@/pages/AdminSettingsPage";
+import GeneralSettingsPage from "@/pages/settings/GeneralSettingsPage";
+import MastersSettingsPage from "@/pages/settings/MastersSettingsPage";
+import ProductionSettingsPage from "@/pages/settings/ProductionSettingsPage";
+import WorkflowRulesPage from "@/pages/settings/WorkflowRulesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import NotFound from "./pages/NotFound.tsx";
 
