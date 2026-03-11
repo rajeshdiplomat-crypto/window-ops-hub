@@ -52,7 +52,32 @@ export default function FinanceSection({ orderId, order, onRefresh }: {
       .select("*")
       .eq("order_id", orderId)
       .order("created_at", { ascending: false });
-    setPayments((data || []) as Payment[]);
+    const paymentList = (data || []) as Payment[];
+    
+    // Auto-create Draft payment for Sales advance if none exists
+    if (order.advance_received > 0) {
+      const hasSalesPayment = paymentList.some(p => p.source_module === "Sales");
+      if (!hasSalesPayment) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await (supabase.from("payment_logs" as any) as any).insert({
+          order_id: orderId,
+          amount: Number(order.advance_received),
+          payment_date: order.created_at ? new Date(order.created_at).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          payment_mode: null,
+          entered_by: user?.id || null,
+          source_module: "Sales",
+          status: "Draft",
+        });
+        // Re-fetch after creating
+        const { data: refreshed } = await (supabase.from("payment_logs" as any) as any)
+          .select("*")
+          .eq("order_id", orderId)
+          .order("created_at", { ascending: false });
+        setPayments((refreshed || []) as Payment[]);
+        return;
+      }
+    }
+    setPayments(paymentList);
   };
 
   useEffect(() => { fetchPayments(); }, [orderId]);
