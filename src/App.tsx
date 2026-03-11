@@ -52,7 +52,10 @@ function ProtectedRoutes() {
         <Route path="/rework" element={<ReworkPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/settings" element={<SettingsPage />}>
-          <Route index element={<AdminSettingsPage />} />
+          <Route index element={<GeneralSettingsPage />} />
+          <Route path="masters" element={<MastersSettingsPage />} />
+          <Route path="production" element={<ProductionSettingsPage />} />
+          <Route path="workflow" element={<WorkflowRulesPage />} />
           <Route path="users" element={<UserManagementPage />} />
         </Route>
         {/* Legacy redirects */}
