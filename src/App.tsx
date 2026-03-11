@@ -45,8 +45,8 @@ function ProtectedRoutes() {
         <Route path="/production" element={<ProductionDashboard />} />
         <Route path="/quality" element={<DepartmentQueuePage departmentKey="quality" />} />
         <Route path="/dispatch" element={<DispatchPage />} />
-        <Route path="/installation" element={<DepartmentQueuePage departmentKey="installation" />} />
-        <Route path="/rework" element={<DepartmentQueuePage departmentKey="rework" />} />
+        <Route path="/installation" element={<InstallationPage />} />
+        <Route path="/rework" element={<ReworkPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/settings" element={<SettingsPage />}>
           <Route index element={<AdminSettingsPage />} />
