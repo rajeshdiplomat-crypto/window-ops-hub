@@ -81,8 +81,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
     setSoNo("");
     setColourShade("");
     setSalesperson("");
-    setProductType("Windows");
-    setOtherProductType("");
+    setSelectedProducts([]);
     setQty("");
     setSqft("");
     setOrderValue("");
