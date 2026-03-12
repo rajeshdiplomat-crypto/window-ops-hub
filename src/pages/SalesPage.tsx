@@ -286,7 +286,7 @@ export default function SalesPage() {
             ) : (
               filtered.map((order) => {
                 const rework = reworkMap[order.id];
-                const receipt = receiptMap[order.id] || order.advance_received;
+                const receipt = receiptMap[order.id] ?? 0;
                 const balance = order.order_value - receipt;
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/50">
