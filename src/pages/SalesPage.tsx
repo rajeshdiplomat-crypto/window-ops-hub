@@ -177,7 +177,7 @@ export default function SalesPage() {
 
   // Compute "Available to Work" = survey_done - design_released (simplistic)
   const getAvlToWork = (o: Order) => {
-    return Math.max(0, o.survey_done_windows - o.design_released_windows);
+    return o.design_released_windows;
   };
 
   const getProductDisplay = (o: Order) => {
