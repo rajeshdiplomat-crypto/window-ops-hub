@@ -172,7 +172,7 @@ export default function SalesPage() {
   };
 
   const handleExport = async () => {
-    await exportOrdersToExcel(orders as any);
+    await exportOrdersToExcel(orders as any, receiptMap);
   };
 
   // Compute "Available to Work" = survey_done - design_released (simplistic)
