@@ -172,12 +172,12 @@ export default function SalesPage() {
   };
 
   const handleExport = async () => {
-    await exportOrdersToExcel(orders as any);
+    await exportOrdersToExcel(orders as any, receiptMap);
   };
 
   // Compute "Available to Work" = survey_done - design_released (simplistic)
   const getAvlToWork = (o: Order) => {
-    return Math.max(0, o.survey_done_windows - o.design_released_windows);
+    return o.design_released_windows;
   };
 
   const getProductDisplay = (o: Order) => {
@@ -286,7 +286,7 @@ export default function SalesPage() {
             ) : (
               filtered.map((order) => {
                 const rework = reworkMap[order.id];
-                const receipt = receiptMap[order.id] || order.advance_received;
+                const receipt = receiptMap[order.id] ?? 0;
                 const balance = order.order_value - receipt;
                 return (
                   <TableRow key={order.id} className="hover:bg-muted/50">
