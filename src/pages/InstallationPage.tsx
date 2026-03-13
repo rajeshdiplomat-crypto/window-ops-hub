@@ -42,8 +42,8 @@ export default function InstallationPage() {
   const getPending = (id: string) => getDispatched(id) - getInstalled(id);
 
   const readyOrders = orders.filter((o) => getDispatched(o.id) > 0 && getInstalled(o.id) === 0);
-  const partialOrders = orders.filter((o) => getInstalled(o.id) > 0 && getInstalled(o.id) < getDispatched(o.id));
-  const fullyOrders = orders.filter((o) => getDispatched(o.id) > 0 && getInstalled(o.id) >= getDispatched(o.id));
+  const partialOrders = orders.filter((o) => getInstalled(o.id) > 0 && getInstalled(o.id) < (o.design_released_windows || 0));
+  const fullyOrders = orders.filter((o) => getInstalled(o.id) > 0 && getInstalled(o.id) >= (o.design_released_windows || 0) && (o.design_released_windows || 0) > 0);
 
   const renderTable = (list: any[]) => (
     <div className="rounded-md border bg-card">

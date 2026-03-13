@@ -6,10 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 
-export default function DesignSection({ orderId, order, onRefresh }: {
+import StatusDropdown from "./StatusDropdown";
+import OrderActivityLog from "./OrderActivityLog";
+
+export default function DesignSection({ orderId, order, onRefresh, updateOrder }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  updateOrder: (field: string, value: any) => void;
 }) {
   const surveyDone = order.survey_done_windows || 0;
   const released = order.design_released_windows || 0;
@@ -115,6 +119,8 @@ export default function DesignSection({ orderId, order, onRefresh }: {
           </div>
         </CardContent>
       </Card>
+
+      <OrderActivityLog orderId={orderId} module="Design" refreshKey={order.updated_at || order.created_at} />
     </div>
   );
 }

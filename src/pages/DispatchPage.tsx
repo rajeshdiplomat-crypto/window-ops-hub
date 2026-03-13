@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Download } from "lucide-react";
+import { exportDataToExcel } from "@/lib/excelUtils";
 
 interface OrderWithDispatch {
   id: string;
@@ -22,7 +25,7 @@ interface OrderWithDispatch {
   sqft: number;
   order_value: number;
   approval_for_dispatch: string;
-  packingTotal: number;
+  PackedTotal: number;
   dispatched: number;
   balance: number;
 }
@@ -30,6 +33,7 @@ interface OrderWithDispatch {
 export default function DispatchPage() {
   const [orders, setOrders] = useState<OrderWithDispatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,9 +45,9 @@ export default function DispatchPage() {
 
       if (!ordersRes.data) { setLoading(false); return; }
 
-      const packingMap: Record<string, number> = {};
+      const PackedMap: Record<string, number> = {};
       ((prodLogsRes.data || []) as any[]).forEach((l: any) => {
-        if (l.stage === "Packing") packingMap[l.order_id] = (packingMap[l.order_id] || 0) + l.windows_completed;
+        if (l.stage === "Packed") PackedMap[l.order_id] = (PackedMap[l.order_id] || 0) + l.windows_completed;
       });
 
       const dispMap: Record<string, number> = {};
@@ -52,11 +56,11 @@ export default function DispatchPage() {
       });
 
       const mapped: OrderWithDispatch[] = (ordersRes.data as any[])
-        .filter((o) => (packingMap[o.id] || 0) > 0 || (dispMap[o.id] || 0) > 0)
+        .filter((o) => (PackedMap[o.id] || 0) > 0 || (dispMap[o.id] || 0) > 0)
         .map((o) => {
-          const packing = packingMap[o.id] || 0;
+          const Packed = PackedMap[o.id] || 0;
           const disp = dispMap[o.id] || 0;
-          return { ...o, packingTotal: packing, dispatched: disp, balance: packing - disp };
+          return { ...o, PackedTotal: Packed, dispatched: disp, balance: Packed - disp };
         });
 
       setOrders(mapped);
@@ -65,12 +69,33 @@ export default function DispatchPage() {
     fetchData();
   }, []);
 
+  const handleExport = (activeTab: string) => {
+    const list = getFiltered(activeTab);
+    const headers = ["Order", "Owner", "Quote No", "SO No", "Windows", "Fin Appr", "Ready", "Dispatched", "Balance"];
+    const data = list.map(o => ({
+      "Order": o.order_name,
+      "Owner": o.dealer_name,
+      "Quote No": o.quote_no || "",
+      "SO No": o.sales_order_no || "",
+      "Windows": o.total_windows,
+      "Fin Appr": o.approval_for_dispatch,
+      "Ready": o.PackedTotal,
+      "Dispatched": o.dispatched,
+      "Balance": o.balance
+    }));
+    exportDataToExcel(data, headers, `dispatch_export_${activeTab}.xlsx`);
+  };
+
   const getFiltered = (tab: string) => {
     switch (tab) {
-      case "ready": return orders.filter((o) => o.packingTotal > 0 && o.dispatched === 0);
-      case "partial": return orders.filter((o) => o.dispatched > 0 && o.dispatched < o.packingTotal);
-      case "full": return orders.filter((o) => o.dispatched > 0 && o.dispatched >= o.packingTotal);
-      default: return orders;
+      case "ready":
+        return orders.filter((o) => o.PackedTotal > 0 && o.dispatched === 0);
+      case "partial":
+        return orders.filter((o) => o.dispatched > 0 && o.dispatched < (o.design_released_windows || 0));
+      case "full":
+        return orders.filter((o) => o.dispatched > 0 && o.dispatched >= (o.design_released_windows || 0) && (o.design_released_windows || 0) > 0);
+      default:
+        return orders;
     }
   };
 
@@ -109,7 +134,7 @@ export default function DispatchPage() {
                     {o.approval_for_dispatch}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-medium">{o.packingTotal}</TableCell>
+                <TableCell className="text-right font-medium">{o.PackedTotal}</TableCell>
                 <TableCell className="text-right">{o.dispatched}</TableCell>
                 <TableCell className="text-right">{o.balance}</TableCell>
               </TableRow>
@@ -122,12 +147,18 @@ export default function DispatchPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Dispatch</h1>
-        <p className="text-sm text-muted-foreground">{orders.length} orders with packed windows</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dispatch</h1>
+          <p className="text-sm text-muted-foreground">{orders.length} orders in queue</p>
+        </div>
+        <Button onClick={() => handleExport(activeTab)} variant="outline" size="sm" className="h-8">
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
       </div>
 
-      <Tabs defaultValue="all">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="ready">Ready for Dispatch</TabsTrigger>
           <TabsTrigger value="partial">Partially Dispatched</TabsTrigger>

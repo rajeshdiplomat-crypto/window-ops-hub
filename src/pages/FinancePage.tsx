@@ -14,8 +14,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportDataToExcel } from "@/lib/excelUtils";
 
 interface Order {
   id: string;
@@ -58,6 +59,7 @@ export default function FinancePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [paymentMap, setPaymentMap] = useState<Record<string, number>>({});
   const [draftOrderIds, setDraftOrderIds] = useState<Set<string>>(new Set());
+  const [dispatchStatusMap, setDispatchStatusMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -68,9 +70,11 @@ export default function FinancePage() {
   const [shades, setShades] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [ordersRes, paymentsRes] = await Promise.all([
+    const [ordersRes, paymentsRes, prodLogsRes, dispatchLogsRes] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       (supabase.from("payment_logs" as any) as any).select("order_id, amount, status"),
+      (supabase.from("production_logs" as any) as any).select("order_id, stage, windows_completed"),
+      (supabase.from("dispatch_logs" as any) as any).select("order_id, windows_dispatched"),
     ]);
     if (ordersRes.error) toast.error("Failed to load orders");
     else setOrders((ordersRes.data as unknown as Order[]) || []);
@@ -88,6 +92,31 @@ export default function FinancePage() {
     }
     setPaymentMap(map);
     setDraftOrderIds(drafts);
+
+    // Dispatch Status Aggregation
+    const packedMap: Record<string, number> = {};
+    for (const p of (prodLogsRes.data || []) as any[]) {
+      if (p.stage === "Packed") {
+        packedMap[p.order_id] = (packedMap[p.order_id] || 0) + Number(p.windows_completed);
+      }
+    }
+
+    const dispatchedMap: Record<string, number> = {};
+    for (const d of (dispatchLogsRes.data || []) as any[]) {
+      dispatchedMap[d.order_id] = (dispatchedMap[d.order_id] || 0) + Number(d.windows_dispatched);
+    }
+
+    const dStatusMap: Record<string, string> = {};
+    for (const o of (ordersRes.data || []) as any[]) {
+      const atw = o.design_released_windows || 0;
+      const dispatched = dispatchedMap[o.id] || 0;
+
+      if (dispatched === 0) dStatusMap[o.id] = "Not Dispatched";
+      else if (dispatched < atw) dStatusMap[o.id] = "Partially Dispatched";
+      else dStatusMap[o.id] = "Fully Dispatched";
+    }
+    setDispatchStatusMap(dStatusMap);
+
     setLoading(false);
   };
 
@@ -133,11 +162,35 @@ export default function FinancePage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  const handleExport = () => {
+    const headers = ["Order", "Owner", "Salesperson", "Order Value", "Receipt", "Balance", "Prod Appr", "Disp Appr", "Dispatch Status", "Comm Status"];
+    const data = filtered.map(o => ({
+      "Order": o.order_name,
+      "Owner": o.dealer_name,
+      "Salesperson": o.salesperson || "",
+      "Order Value": o.order_value,
+      "Receipt": paymentMap[o.id] || 0,
+      "Balance": (o.order_value || 0) - (paymentMap[o.id] || 0),
+      "Prod Appr": o.approval_for_production,
+      "Disp Appr": o.approval_for_dispatch,
+      "Dispatch Status": dispatchStatusMap[o.id] || "Not Dispatched",
+      "Comm Status": o.commercial_status
+    }));
+    exportDataToExcel(data, headers, `finance_export_${tab}.xlsx`);
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Finance</h1>
-        <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Finance</h1>
+          <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -234,7 +287,11 @@ export default function FinancePage() {
                         {order.approval_for_dispatch}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{order.dispatch_status}</TableCell>
+                    <TableCell className="text-sm">
+                      <Badge variant="outline" className={dispatchStatusMap[order.id] === "Fully Dispatched" ? "bg-success/15 text-success border-success/20" : dispatchStatusMap[order.id] === "Partially Dispatched" ? "bg-warning/15 text-warning border-warning/20" : "bg-muted text-muted-foreground"}>
+                        {dispatchStatusMap[order.id] || "Not Dispatched"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-sm">{order.commercial_status}</TableCell>
                   </TableRow>
                 );

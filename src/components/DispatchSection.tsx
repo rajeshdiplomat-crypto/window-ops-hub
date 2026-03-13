@@ -11,14 +11,18 @@ import {
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 import { format } from "date-fns";
+import OrderActivityLog from "./OrderActivityLog";
+
+import StatusDropdown from "./StatusDropdown";
 
 interface Props {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  updateOrder: (field: string, value: any) => void;
 }
 
-export default function DispatchSection({ orderId, order, onRefresh }: Props) {
+export default function DispatchSection({ orderId, order, onRefresh, updateOrder }: Props) {
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,9 +45,9 @@ export default function DispatchSection({ orderId, order, onRefresh }: Props) {
 
   useEffect(() => { fetchData(); }, [orderId]);
 
-  const packingTotal = productionLogs.filter((l: any) => l.stage === "Packing").reduce((sum: number, l: any) => sum + l.windows_completed, 0);
+  const PackedTotal = productionLogs.filter((l: any) => l.stage === "Packed").reduce((sum: number, l: any) => sum + l.windows_completed, 0);
   const totalDispatched = dispatchLogs.reduce((sum: number, d: any) => sum + d.windows_dispatched, 0);
-  const balanceToDispatch = packingTotal - totalDispatched;
+  const balanceToDispatch = PackedTotal - totalDispatched;
 
   const handleAddDispatch = async () => {
     const count = Number(windowsCount);
@@ -101,16 +105,10 @@ export default function DispatchSection({ orderId, order, onRefresh }: Props) {
           <CardTitle className="text-base">Dispatch Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-4 gap-3">
-            <div className="rounded-md border p-3 text-center">
-              <p className="text-xs text-muted-foreground">Finance Approval</p>
-              <Badge variant={order.approval_for_dispatch === "Approved" ? "default" : "secondary"}>
-                {order.approval_for_dispatch}
-              </Badge>
-            </div>
+          <div className="grid grid-cols-3 gap-3">
             <div className="rounded-md border p-3 text-center">
               <p className="text-xs text-muted-foreground">Ready for Dispatch</p>
-              <p className="text-lg font-semibold">{packingTotal}</p>
+              <p className="text-lg font-semibold">{PackedTotal}</p>
             </div>
             <div className="rounded-md border p-3 text-center">
               <p className="text-xs text-muted-foreground">Dispatched</p>
@@ -195,6 +193,8 @@ export default function DispatchSection({ orderId, order, onRefresh }: Props) {
           )}
         </CardContent>
       </Card>
+
+      <OrderActivityLog orderId={orderId} module="Dispatch" refreshKey={order.updated_at || order.created_at} />
     </div>
   );
 }

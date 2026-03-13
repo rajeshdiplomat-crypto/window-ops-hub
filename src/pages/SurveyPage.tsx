@@ -14,8 +14,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportDataToExcel } from "@/lib/excelUtils";
 
 interface Order {
   id: string;
@@ -28,7 +29,6 @@ interface Order {
   salesperson: string | null;
   product_type: string;
   total_windows: number;
-  windows_released: number;
   sqft: number;
   order_value: number;
   survey_done_windows: number;
@@ -87,8 +87,8 @@ export default function SurveyPage() {
     if (search) {
       const s = search.toLowerCase();
       if (!o.order_name.toLowerCase().includes(s) &&
-          !o.dealer_name.toLowerCase().includes(s) &&
-          !(o.quote_no || "").toLowerCase().includes(s)) return false;
+        !o.dealer_name.toLowerCase().includes(s) &&
+        !(o.quote_no || "").toLowerCase().includes(s)) return false;
     }
     if (filters.salesperson && o.salesperson !== filters.salesperson) return false;
     if (filters.orderOwner && o.dealer_name !== filters.orderOwner) return false;
@@ -98,11 +98,32 @@ export default function SurveyPage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  const handleExport = () => {
+    const headers = ["Order", "Owner", "Salesperson", "Total Win", "Survey Done", "Remarks", "Prod Appr"];
+    const data = filtered.map(o => ({
+      "Order": o.order_name,
+      "Owner": o.dealer_name,
+      "Salesperson": o.salesperson || "",
+      "Total Win": o.total_windows,
+      "Survey Done": o.survey_done_windows,
+      "Remarks": o.survey_remarks || "",
+      "Prod Appr": o.approval_for_production
+    }));
+    exportDataToExcel(data, headers, `survey_export_${tab}.xlsx`);
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Survey</h1>
-        <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Survey</h1>
+          <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -159,7 +180,6 @@ export default function SurveyPage() {
               <TableHead className="min-w-[100px]">Salesperson</TableHead>
               <TableHead className="min-w-[140px]">Product Type</TableHead>
               <TableHead className="text-right min-w-[60px]">Windows</TableHead>
-              <TableHead className="text-right min-w-[70px]">Avl to Work</TableHead>
               <TableHead className="text-right min-w-[60px]">Sqft</TableHead>
               <TableHead className="text-right min-w-[90px]">Order Value</TableHead>
               <TableHead className="text-right min-w-[90px]">Survey Done</TableHead>
@@ -190,7 +210,6 @@ export default function SurveyPage() {
                     <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
                     <TableCell className="text-sm max-w-[180px] truncate" title={order.product_type}>{order.product_type}</TableCell>
                     <TableCell className="text-right">{order.total_windows}</TableCell>
-                    <TableCell className="text-right">{order.windows_released}</TableCell>
                     <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
                     <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
                     <TableCell className="text-right font-medium">{done}</TableCell>

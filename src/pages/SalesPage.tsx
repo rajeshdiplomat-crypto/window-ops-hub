@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Search, Filter, X, Plus, Upload, Download, FileSpreadsheet, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate } from "@/lib/excelUtils";
+import { importOrdersFromFile, exportOrdersToExcel, downloadImportTemplate, exportDataToExcel } from "@/lib/excelUtils";
 import CreateOrderDialog from "@/components/CreateOrderDialog";
 import EditOrderDialog from "@/components/EditOrderDialog";
 
@@ -56,6 +56,7 @@ const commercialColor = (status: string) => {
 const dispatchColor = (status: string) => {
   if (status === "Fully Dispatched") return "bg-success/15 text-success border-success/20";
   if (status === "Partially Dispatched") return "bg-warning/15 text-warning border-warning/20";
+  if (status === "Not Dispatched") return "bg-muted text-muted-foreground";
   return "bg-muted text-muted-foreground";
 };
 
@@ -76,6 +77,7 @@ export default function SalesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [reworkMap, setReworkMap] = useState<Record<string, ReworkInfo>>({});
   const [receiptMap, setReceiptMap] = useState<Record<string, number>>({});
+  const [dispatchStatusMap, setDispatchStatusMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -89,10 +91,12 @@ export default function SalesPage() {
   const [editOrderId, setEditOrderId] = useState<string | null>(null);
 
   const fetchData = async () => {
-    const [ordersRes, reworkRes, paymentRes] = await Promise.all([
+    const [ordersRes, reworkRes, paymentRes, prodLogsRes, dispatchLogsRes] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       supabase.from("rework_logs").select("order_id, rework_qty, rework_issue, reported_at").order("reported_at", { ascending: false }),
       supabase.from("payment_logs").select("order_id, amount").eq("status", "Confirmed"),
+      (supabase.from("production_logs" as any) as any).select("order_id, stage, windows_completed"),
+      (supabase.from("dispatch_logs" as any) as any).select("order_id, windows_dispatched"),
     ]);
     if (ordersRes.error) toast.error("Failed to load orders");
     else setOrders((ordersRes.data as unknown as Order[]) || []);
@@ -116,6 +120,30 @@ export default function SalesPage() {
     }
     setReceiptMap(pMap);
 
+    // Dispatch Status Aggregation
+    const packedMap: Record<string, number> = {};
+    for (const p of (prodLogsRes.data || []) as any[]) {
+      if (p.stage === "Packed") {
+        packedMap[p.order_id] = (packedMap[p.order_id] || 0) + Number(p.windows_completed);
+      }
+    }
+
+    const dispatchedMap: Record<string, number> = {};
+    for (const d of (dispatchLogsRes.data || []) as any[]) {
+      dispatchedMap[d.order_id] = (dispatchedMap[d.order_id] || 0) + Number(d.windows_dispatched);
+    }
+
+    const dStatusMap: Record<string, string> = {};
+    for (const o of (ordersRes.data || []) as any[]) {
+      const atw = o.design_released_windows || 0;
+      const dispatched = dispatchedMap[o.id] || 0;
+
+      if (dispatched === 0) dStatusMap[o.id] = "Not Dispatched";
+      else if (dispatched < atw) dStatusMap[o.id] = "Partially Dispatched";
+      else dStatusMap[o.id] = "Fully Dispatched";
+    }
+    setDispatchStatusMap(dStatusMap);
+
     setLoading(false);
   };
 
@@ -134,8 +162,9 @@ export default function SalesPage() {
   useEffect(() => { if (orders.length > 0) fetchFilterOptions(); }, [orders.length]);
 
   const tabFiltered = orders.filter((o) => {
-    if (tab === "open") return o.dispatch_status !== "Fully Dispatched";
-    if (tab === "dispatched") return o.dispatch_status === "Fully Dispatched";
+    const status = dispatchStatusMap[o.id] || "Not Dispatched";
+    if (tab === "open") return status !== "Fully Dispatched";
+    if (tab === "dispatched") return status === "Fully Dispatched";
     return true;
   });
 
@@ -171,8 +200,30 @@ export default function SalesPage() {
     input.click();
   };
 
-  const handleExport = async () => {
-    await exportOrdersToExcel(orders as any, receiptMap);
+  const handleExport = () => {
+    const headers = [
+      "Quotation No", "SO No", "Order Name", "Owner", "Salesperson",
+      "Product", "Shade", "Win", "Value", "Receipt", "Balance",
+      "Commercial Status", "Dispatch Status"
+    ];
+
+    const data = filtered.map(o => ({
+      "Quotation No": o.quote_no || "",
+      "SO No": o.sales_order_no || "",
+      "Order Name": o.order_name,
+      "Owner": o.dealer_name,
+      "Salesperson": o.salesperson || "",
+      "Product": getProductDisplay(o),
+      "Shade": o.colour_shade || "",
+      "Win": o.total_windows,
+      "Value": o.order_value,
+      "Receipt": receiptMap[o.id] || 0,
+      "Balance": (o.order_value || 0) - (receiptMap[o.id] || 0),
+      "Commercial Status": o.commercial_status,
+      "Dispatch Status": dispatchStatusMap[o.id] || "Not Dispatched"
+    }));
+
+    exportDataToExcel(data, headers, `sales_export_${tab}.xlsx`);
   };
 
   // Compute "Available to Work" = survey_done - design_released (simplistic)
@@ -313,8 +364,8 @@ export default function SalesPage() {
                     <TableCell className="text-right">{rework?.totalQty || 0}</TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[180px]">{rework?.latestIssue || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={dispatchColor(order.dispatch_status)}>
-                        {order.dispatch_status}
+                      <Badge variant="outline" className={dispatchColor(dispatchStatusMap[order.id] || "Not Dispatched")}>
+                        {dispatchStatusMap[order.id] || "Not Dispatched"}
                       </Badge>
                     </TableCell>
                     <TableCell>

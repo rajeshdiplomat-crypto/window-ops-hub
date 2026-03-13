@@ -34,10 +34,14 @@ interface Payment {
 
 const APPROVAL_OPTIONS = ["Pending", "Approved", "Hold"];
 
-export default function FinanceSection({ orderId, order, onRefresh }: {
+import StatusDropdown from "./StatusDropdown";
+import OrderActivityLog from "./OrderActivityLog";
+
+export default function FinanceSection({ orderId, order, onRefresh, updateOrder }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  updateOrder: (field: string, value: any) => void;
 }) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -53,7 +57,7 @@ export default function FinanceSection({ orderId, order, onRefresh }: {
       .eq("order_id", orderId)
       .order("created_at", { ascending: false });
     const paymentList = (data || []) as Payment[];
-    
+
     // Auto-create Draft payment for Sales advance if none exists
     if (order.advance_received > 0) {
       const hasSalesPayment = paymentList.some(p => p.source_module === "Sales");
@@ -175,6 +179,12 @@ export default function FinanceSection({ orderId, order, onRefresh }: {
   };
 
   const deleteDraftPayment = async (p: Payment) => {
+    // If it's a Sales draft representing the advance_received, we must also zero out the advance_received
+    // on the order itself, otherwise fetchPayments will instantly recreate it.
+    if (p.source_module === "Sales") {
+      await supabase.from("orders").update({ advance_received: 0 } as any).eq("id", orderId);
+    }
+
     await (supabase.from("payment_logs" as any) as any).delete().eq("id", p.id);
     await logActivity({
       orderId,
@@ -397,6 +407,7 @@ export default function FinanceSection({ orderId, order, onRefresh }: {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <OrderActivityLog orderId={orderId} module="Finance" refreshKey={order.updated_at || order.created_at} />
     </div>
   );
 }

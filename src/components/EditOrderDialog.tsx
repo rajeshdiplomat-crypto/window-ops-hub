@@ -37,6 +37,7 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [commercialStatus, setCommercialStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [projectNames, setProjectNames] = useState<SettingsItem[]>([]);
   const [dealers, setDealers] = useState<SettingsItem[]>([]);
@@ -142,6 +143,78 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
       toast.success("Order updated");
       onOpenChange(false);
       onUpdated();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you exactly sure you want to delete this order? This action cannot be undone.")) return;
+
+    // Deletion constraint logic: Only delete if no downstream modules have progressed
+    if ((order.survey_done_windows || 0) > 0) return toast.error("Cannot delete: Order has progressed to Survey module. Survey must be reverted back to 0 first.");
+    if ((order.design_released_windows || 0) > 0) return toast.error("Cannot delete: Order has progressed to Design module. Design must be reverted back to 0 first.");
+
+    // Check for Production logs specifically (if foreign-key constraint doesn't cascade, we should warn manually)
+    const { count: prodCount } = await supabase.from("production_logs").select("*", { count: 'exact', head: true }).eq("order_id", order.id);
+    if ((prodCount || 0) > 0) return toast.error("Cannot delete: Order has production logs. Production logs must be deleted first.");
+
+    const { count: paymentCount } = await supabase.from("payment_logs").select("*", { count: 'exact', head: true }).eq("order_id", order.id);
+    if ((paymentCount || 0) > 0) return toast.error("Cannot delete: Order has payment logs. Finance must delete logs first.");
+
+    setDeleting(true);
+
+    try {
+      // Explicitly delete ALL child records — manual cascade
+      const tables = [
+        "order_activity_log",
+        "dispatch",
+        "dispatch_logs",
+        "installation",
+        "installation_logs",
+        "material_status",
+        "production_status",
+        "payment_logs",
+        "production_logs",
+        "rework_logs",
+      ] as const;
+
+      for (const table of tables) {
+        const { error: childErr } = await (supabase.from(table as any) as any).delete().eq("order_id", order.id);
+        if (childErr && childErr.code !== "PGRST204") {
+          console.warn(`Failed to delete from ${table}:`, childErr.message);
+        }
+      }
+
+      // Also cleanup polymorphic audit logs
+      const { error: auditErr } = await supabase.from("audit_log").delete().eq("entity_id", order.id).eq("entity_type", "orders");
+      if (auditErr) console.warn("Failed to cleanup audit_log:", auditErr.message);
+
+      // Now attempt main order deletion
+      const { error: deleteErr, count } = await (supabase.from("orders") as any).delete({ count: "exact" }).eq("id", order.id);
+
+      console.log("Order delete result — error:", deleteErr, "count:", count);
+
+      if (deleteErr) {
+        toast.error(`Delete failed: ${deleteErr.message}`);
+        setDeleting(false);
+        return;
+      }
+
+      if (!count || count === 0) {
+        // Fallback: If exact count check failed but error is null, it might be an RLS issue or just count reporting quirk.
+        // We will try one more time without count check or just warn more clearly.
+        toast.error("Database rejected the deletion (0 rows affected). Please contact admin to check your Delete permissions (RLS) for the 'orders' table.");
+        setDeleting(false);
+        return;
+      }
+
+      toast.success("Order deleted successfully");
+      onOpenChange(false);
+      onUpdated();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "An unexpected error occurred during deletion.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -277,9 +350,23 @@ export default function EditOrderDialog({ open, onOpenChange, onUpdated, order }
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Saving…" : "Save Changes"}
-          </Button>
+          <div className="flex gap-4 pt-2 border-t mt-4">
+            <Button
+              type="button"
+              variant="destructive"
+              className="mr-auto w-1/3"
+              onClick={handleDelete}
+              disabled={submitting || deleting}
+            >
+              {deleting ? "Deleting…" : "Delete Order"}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting || deleting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || deleting} className="flex-1">
+              {submitting ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

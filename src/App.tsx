@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import LoginPage from "@/pages/LoginPage";
-import DashboardPage from "@/pages/DashboardPage";
+import OperationalDashboard from "@/pages/OperationalDashboard";
 import OrdersDashboard from "@/pages/OrdersDashboard";
 import OrderDetailPage from "@/pages/OrderDetailPage";
 import ProductionDashboard from "@/pages/ProductionDashboard";
@@ -25,32 +25,44 @@ import MastersSettingsPage from "@/pages/settings/MastersSettingsPage";
 import ProductionSettingsPage from "@/pages/settings/ProductionSettingsPage";
 import WorkflowRulesPage from "@/pages/settings/WorkflowRulesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
-import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+
+  if (loading)
+    return (
+      <div className="flex h-screen items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+
   if (!user) return <LoginPage />;
 
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
+        {/* Operations Hub is the main dashboard */}
+        <Route path="/" element={<OperationalDashboard />} />
+
         <Route path="/orders" element={<OrdersDashboard />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
+
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/survey" element={<SurveyPage />} />
         <Route path="/finance" element={<FinancePage />} />
         <Route path="/design" element={<DesignPage />} />
         <Route path="/procurement" element={<ProcurementPage />} />
+
         <Route path="/production" element={<ProductionDashboard />} />
-        {/* Quality removed — handled inside Production */}
+        {/* Quality handled inside Production */}
+
         <Route path="/dispatch" element={<DispatchPage />} />
         <Route path="/installation" element={<InstallationPage />} />
         <Route path="/rework" element={<ReworkPage />} />
         <Route path="/store" element={<StorePage />} />
+
         <Route path="/settings" element={<SettingsPage />}>
           <Route index element={<GeneralSettingsPage />} />
           <Route path="masters" element={<MastersSettingsPage />} />
@@ -58,11 +70,9 @@ function ProtectedRoutes() {
           <Route path="workflow" element={<WorkflowRulesPage />} />
           <Route path="users" element={<UserManagementPage />} />
         </Route>
-        {/* Legacy redirects */}
-        <Route path="/admin/users" element={<Navigate to="/settings/users" replace />} />
-        <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
-        <Route path="/queue/:role" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<NotFound />} />
+
+        {/* fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
   );
