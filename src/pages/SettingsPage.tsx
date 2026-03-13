@@ -5,8 +5,6 @@ import { cn } from "@/lib/utils";
 const tabs = [
   { label: "General", path: "/settings", icon: Settings },
   { label: "Masters", path: "/settings/masters", icon: Database },
-  { label: "Production", path: "/settings/production", icon: Factory },
-  { label: "Workflow Rules", path: "/settings/workflow", icon: GitBranch },
   { label: "Users", path: "/settings/users", icon: Users },
 ];
 

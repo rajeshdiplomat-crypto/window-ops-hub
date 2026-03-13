@@ -20,9 +20,10 @@ const REWORK_STATUSES = ["Pending", "In Progress", "Solved", "Closed"];
 
 interface ReworkSectionProps {
   orderId: string;
+  readOnly?: boolean;
 }
 
-export default function ReworkSection({ orderId }: ReworkSectionProps) {
+export default function ReworkSection({ orderId, readOnly }: ReworkSectionProps) {
   const [logs, setLogs] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [qty, setQty] = useState("");
@@ -122,9 +123,11 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Rework Log ({logs.reduce((s: number, l: any) => s + (l.rework_qty || 0), 0)} total qty)</CardTitle>
-        <Button size="sm" className="gap-1" onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-4 w-4" /> Add Rework Issue
-        </Button>
+        {!readOnly && (
+          <Button size="sm" className="gap-1" onClick={() => setShowForm(!showForm)}>
+            <Plus className="h-4 w-4" /> Add Rework Issue
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {showForm && (
@@ -170,7 +173,7 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
                   <TableCell className="text-right font-medium">{log.rework_qty}</TableCell>
                   <TableCell className="text-sm italic">{log.rework_issue}</TableCell>
                   <TableCell>
-                    <Select value={log.issue_type || ""} onValueChange={(val) => updateLog(log.id, "issue_type", val)}>
+                    <Select disabled={readOnly} value={log.issue_type || ""} onValueChange={(val) => updateLog(log.id, "issue_type", val)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
                       <SelectContent>
                         {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -178,7 +181,7 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <Select value={log.responsible_person || ""} onValueChange={(val) => updateLog(log.id, "responsible_person", val)}>
+                    <Select disabled={readOnly} value={log.responsible_person || ""} onValueChange={(val) => updateLog(log.id, "responsible_person", val)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Team" /></SelectTrigger>
                       <SelectContent>
                         {responsibleTeams.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -189,7 +192,8 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
                     <Input
                       className="h-8 text-xs"
                       defaultValue={log.solution || ""}
-                      placeholder="Add solution"
+                      placeholder={readOnly ? "" : "Add solution"}
+                      readOnly={readOnly}
                       onBlur={(e) => {
                         if (e.target.value !== (log.solution || "")) updateLog(log.id, "solution", e.target.value);
                       }}
@@ -201,6 +205,7 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
                       className="h-8 text-xs text-right"
                       defaultValue={log.cost || ""}
                       placeholder="0"
+                      readOnly={readOnly}
                       onBlur={(e) => {
                         const val = Number(e.target.value);
                         if (val !== (log.cost || 0)) updateLog(log.id, "cost", val);
@@ -208,7 +213,7 @@ export default function ReworkSection({ orderId }: ReworkSectionProps) {
                     />
                   </TableCell>
                   <TableCell>
-                    <Select value={log.status || "Pending"} onValueChange={(val) => updateLog(log.id, "status", val)}>
+                    <Select disabled={readOnly} value={log.status || "Pending"} onValueChange={(val) => updateLog(log.id, "status", val)}>
                       <SelectTrigger className={`h-8 text-xs font-medium ${statusColor(log.status)}`}>
                         <SelectValue />
                       </SelectTrigger>

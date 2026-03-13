@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Check } from "lucide-react";
@@ -30,7 +31,19 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { roles: userRoles } = useUserRoles();
   const [activeTab, setActiveTab] = useState("details");
+
+  const isAdmin = userRoles.includes("admin");
+  const isManagement = userRoles.includes("management");
+
+  const canEdit = (moduleRole: string | string[]) => {
+    if (isAdmin || isManagement) return true;
+    if (Array.isArray(moduleRole)) {
+      return moduleRole.some(r => userRoles.includes(r as any));
+    }
+    return userRoles.includes(moduleRole as any);
+  };
 
   const fetchAll = async () => {
     if (!id) return;
@@ -175,6 +188,8 @@ export default function OrderDetailPage() {
                 <Label>Sales Order Number</Label>
                 <Input
                   defaultValue={order.sales_order_no ?? ""}
+                  readOnly={!canEdit(["sales", "design"])}
+                  className={!canEdit(["sales", "design"]) ? "bg-muted" : ""}
                   onBlur={(e) => {
                     const val = e.target.value;
                     if (val !== (order.sales_order_no ?? "").toString()) updateOrder("sales_order_no", val);
@@ -185,6 +200,8 @@ export default function OrderDetailPage() {
                 <Label>Colour / Shade</Label>
                 <Input
                   defaultValue={order.colour_shade ?? ""}
+                  readOnly={!canEdit(["sales", "design"])}
+                  className={!canEdit(["sales", "design"]) ? "bg-muted" : ""}
                   onBlur={(e) => {
                     const val = e.target.value;
                     if (val !== (order.colour_shade ?? "").toString()) updateOrder("colour_shade", val);
@@ -196,6 +213,8 @@ export default function OrderDetailPage() {
                 <Input
                   type="number"
                   defaultValue={order.advance_received ?? ""}
+                  readOnly={!canEdit("sales")}
+                  className={!canEdit("sales") ? "bg-muted" : ""}
                   onBlur={(e) => {
                     const val = Number(e.target.value);
                     if (val !== Number(order.advance_received ?? 0)) updateOrder("advance_received", val);
@@ -207,6 +226,8 @@ export default function OrderDetailPage() {
                 <Input
                   type="number"
                   defaultValue={order.order_value ?? ""}
+                  readOnly={!canEdit("sales")}
+                  className={!canEdit("sales") ? "bg-muted" : ""}
                   onBlur={(e) => {
                     const val = Number(e.target.value);
                     if (val !== Number(order.order_value ?? 0)) updateOrder("order_value", val);
@@ -219,20 +240,20 @@ export default function OrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="survey" className="mt-4">
-          <SurveySection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} />
+          <SurveySection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} readOnly={!canEdit("survey")} />
         </TabsContent>
 
         <TabsContent value="finance" className="mt-4">
-          <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} />
+          <FinanceSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} readOnly={!canEdit("finance")} />
         </TabsContent>
 
         <TabsContent value="design" className="mt-4">
-          <DesignSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} />
+          <DesignSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} readOnly={!canEdit("design")} />
         </TabsContent>
 
         <TabsContent value="materials" className="mt-4 space-y-6">
-          <StoreSection orderId={id!} order={order} onRefresh={fetchAll} />
-          <ProcurementSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <StoreSection orderId={id!} order={order} onRefresh={fetchAll} readOnly={!canEdit("stores")} />
+          <ProcurementSection orderId={id!} order={order} onRefresh={fetchAll} readOnly={!canEdit("procurement")} />
           <OrderActivityLog
             orderId={id!}
             module={["Store", "Procurement", "Store -> Procurement AutoSync", "Procurement -> Store AutoSync"]}
@@ -241,19 +262,19 @@ export default function OrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="production" className="mt-4">
-          <ProductionSection orderId={id!} order={order} onRefresh={fetchAll} />
+          <ProductionSection orderId={id!} order={order} onRefresh={fetchAll} readOnly={!canEdit("production")} />
         </TabsContent>
 
         <TabsContent value="dispatch" className="mt-4">
-          <DispatchSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} />
+          <DispatchSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} readOnly={!canEdit("dispatch")} />
         </TabsContent>
 
         <TabsContent value="installation" className="mt-4">
-          <InstallationSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} />
+          <InstallationSection orderId={id!} order={order} onRefresh={fetchAll} updateOrder={updateOrder} readOnly={!canEdit("installation")} />
         </TabsContent>
 
         <TabsContent value="rework" className="mt-4">
-          <ReworkSection orderId={id!} />
+          <ReworkSection orderId={id!} readOnly={!canEdit(["production", "installation", "design"])} />
         </TabsContent>
       </Tabs>
     </div>

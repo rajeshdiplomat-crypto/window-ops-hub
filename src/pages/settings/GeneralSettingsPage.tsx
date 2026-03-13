@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Palette, Settings, RefreshCw, Users, Database } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface ConfigItem {
   id: string;
@@ -113,7 +120,13 @@ export default function GeneralSettingsPage() {
     const items = (data as AppSetting[]) || [];
     setSettings(items);
     const vals: Record<string, string> = {};
-    items.forEach((s) => { vals[s.key] = s.value; });
+    items.forEach((s) => { 
+      vals[s.key] = s.value; 
+      if (s.key === "theme_primary") {
+        document.documentElement.style.setProperty('--primary', s.value);
+        document.documentElement.style.setProperty('--ring', s.value);
+      }
+    });
     setEditValues(vals);
     setLoading(false);
   };
@@ -127,140 +140,188 @@ export default function GeneralSettingsPage() {
       .update({ value: editValues[key], updated_at: new Date().toISOString() })
       .eq("id", setting.id);
     if (error) toast.error(error.message);
-    else toast.success("Setting saved");
+    else {
+      toast.success("Setting saved");
+      if (key === "theme_primary") {
+        applyTheme(editValues[key]);
+      }
+    }
   };
 
+  const applyTheme = (color: string) => {
+    document.documentElement.style.setProperty('--primary', color);
+    document.documentElement.style.setProperty('--ring', color);
+  };
+
+  const THEME_COLORS = [
+    { name: "Ocean Blue", value: "213 50% 32%" },
+    { name: "Deep Purple", value: "262 83% 58%" },
+    { name: "Emerald", value: "142 71% 45%" },
+    { name: "Crimson", value: "346 84% 61%" },
+    { name: "Midnight", value: "220 40% 15%" },
+    { name: "Amber", value: "38 92% 50%" },
+  ];
+
   const minAdvance = settings.find((s) => s.key === "min_advance_percentage");
+  const currentTheme = editValues["theme_primary"] || "213 50% 32%";
 
   return (
-    <div className="max-w-3xl space-y-4">
-      {/* Minimum Advance Payment */}
-      {minAdvance && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Minimum Advance Payment (%)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                value={editValues["min_advance_percentage"] || ""}
-                onChange={(e) => setEditValues({ ...editValues, min_advance_percentage: e.target.value })}
-                className="flex-1"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => save("min_advance_percentage")}
-                disabled={editValues["min_advance_percentage"] === minAdvance.value}
-              >
-                <Save className="h-3.5 w-3.5 mr-1" /> Save
-              </Button>
+    <div className="max-w-3xl pb-20">
+      <Accordion type="multiple" className="space-y-4">
+        {/* Appearance & Branding */}
+        <AccordionItem value="appearance" className="border rounded-lg bg-card px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-primary" />
+              <span className="text-base font-semibold">Appearance & Branding</span>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Rework Categories */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Rework Categories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={editValues["rework_categories"] || "Manufacturing, Design, Survey, Installation, Damage"}
-                onChange={(e) => setEditValues({ ...editValues, rework_categories: e.target.value })}
-                className="flex-1"
-                placeholder="Comma separated values"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (!settings.find(s => s.key === "rework_categories")) {
-                    // If setting doesn't exist, we might need a different approach or assume it exists
-                    toast.error("Rework categories setting not found in DB");
-                  } else {
-                    save("rework_categories");
-                  }
-                }}
-              >
-                <Save className="h-3.5 w-3.5 mr-1" /> Save
-              </Button>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6 pt-2">
+            <div className="space-y-6">
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Primary Theme Color</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {THEME_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => {
+                        setEditValues({ ...editValues, theme_primary: c.value });
+                        // If the setting exists in DB, save it, otherwise just apply locally
+                        const setting = settings.find(s => s.key === "theme_primary");
+                        if (setting) {
+                          save("theme_primary");
+                        } else {
+                          applyTheme(c.value);
+                          toast.success(`Applied ${c.name} theme`);
+                        }
+                      }}
+                      className={cn(
+                        "group relative flex flex-col items-center gap-1.5 p-2 rounded-lg border-2 transition-all",
+                        currentTheme === c.value ? "border-primary bg-primary/5 shadow-sm" : "border-transparent hover:bg-muted"
+                      )}
+                    >
+                      <div
+                        className="h-8 w-8 rounded-full shadow-inner border border-black/5"
+                        style={{ backgroundColor: `hsl(${c.value})` }}
+                      />
+                      <span className="text-[10px] font-medium uppercase tracking-tight">{c.name}</span>
+                      {currentTheme === c.value && (
+                        <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white">
+                          <Save className="h-2 w-2" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">List items separated by commas (e.g., Glass, Frame, Lock)</p>
-          </div>
-        </CardContent>
-      </Card>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* Rework Responsible Teams */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Rework Responsible Teams</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={editValues["rework_responsible_teams"] || "Factory, Sales, Installation Team, Logistics"}
-                onChange={(e) => setEditValues({ ...editValues, rework_responsible_teams: e.target.value })}
-                className="flex-1"
-                placeholder="Comma separated values"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (!settings.find(s => s.key === "rework_responsible_teams")) {
-                    toast.error("Rework responsible teams setting not found in DB");
-                  } else {
-                    save("rework_responsible_teams");
-                  }
-                }}
-              >
-                <Save className="h-3.5 w-3.5 mr-1" /> Save
-              </Button>
+        {/* Global Rules */}
+        <AccordionItem value="global-rules" className="border rounded-lg bg-card px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-primary" />
+              <span className="text-base font-semibold">Global Business Rules</span>
             </div>
-            <p className="text-xs text-muted-foreground">List teams separated by commas (e.g., Factory, Site, Sales)</p>
-          </div>
-        </CardContent>
-      </Card>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6 pt-2 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-bold italic">Core Business Logic</Label>
+              <ConfigList table="commercial_statuses" title="Commercial Statuses" />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* Commercial Statuses */}
-      <ConfigList table="commercial_statuses" title="Commercial Statuses" />
+        {/* Rework Configuration */}
+        <AccordionItem value="rework" className="border rounded-lg bg-card px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-primary" />
+              <span className="text-base font-semibold">Rework & Quality Configuration</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6 pt-2 space-y-6">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-bold uppercase">Rework Categories</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editValues["rework_categories"] || "Manufacturing, Design, Survey, Installation, Damage"}
+                  onChange={(e) => setEditValues({ ...editValues, rework_categories: e.target.value })}
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => save("rework_categories")}
+                >
+                  <Save className="h-3.5 w-3.5 mr-1" /> Save
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Comma separated values for rework reason dropdowns.</p>
+            </div>
 
-      {/* Available Roles */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Available Roles</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {ALL_ROLES.map((role) => (
-              <Badge key={role} variant="secondary" className="capitalize text-sm">{role}</Badge>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">Roles are system-defined.</p>
-        </CardContent>
-      </Card>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-bold uppercase">Responsible Teams</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editValues["rework_responsible_teams"] || "Factory, Sales, Installation Team, Logistics"}
+                  onChange={(e) => setEditValues({ ...editValues, rework_responsible_teams: e.target.value })}
+                  className="flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => save("rework_responsible_teams")}
+                >
+                  <Save className="h-3.5 w-3.5 mr-1" /> Save
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* System Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">System Information</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Version</span>
-            <span>1.0.0</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Environment</span>
-            <span>Production</span>
-          </div>
-        </CardContent>
-      </Card>
+        {/* User Roles (Read-Only) */}
+        <AccordionItem value="roles" className="border rounded-lg bg-card px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-base font-semibold">System Access Roles</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6 pt-2">
+            <div className="flex flex-wrap gap-2">
+              {ALL_ROLES.map((role) => (
+                <Badge key={role} variant="secondary" className="capitalize text-sm">{role}</Badge>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Roles are system-defined and manage module access across the Pulse ecosystem.</p>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* System Information */}
+        <AccordionItem value="system" className="border rounded-lg bg-card px-4">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-primary" />
+              <span className="text-base font-semibold">System Health</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6 pt-2">
+            <div className="text-sm space-y-2 max-w-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Version</span>
+                <span className="font-mono bg-muted px-1.5 rounded">v1.2.4-Pulse</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Environment</span>
+                <Badge variant="outline" className="text-xs font-bold text-emerald-600 border-emerald-100 bg-emerald-50">Production</Badge>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

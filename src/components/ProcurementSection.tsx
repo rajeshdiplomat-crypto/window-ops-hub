@@ -21,10 +21,14 @@ interface ProcurementSectionProps {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  readOnly?: boolean;
 }
 
-export default function ProcurementSection({ orderId, order, onRefresh }: ProcurementSectionProps) {
+import { cn } from "@/lib/utils";
+
+export default function ProcurementSection({ orderId, order, onRefresh, readOnly }: ProcurementSectionProps) {
   const updateField = async (field: string, value: string | null) => {
+    if (readOnly) return;
     const oldValue = order[field];
     if (String(oldValue ?? "") === String(value ?? "")) return;
 
@@ -64,7 +68,7 @@ export default function ProcurementSection({ orderId, order, onRefresh }: Procur
               <div key={f.field} className="space-y-2">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">{f.label}</Label>
-                  <Select value={order[f.field] || f.statuses[0]} onValueChange={(v) => updateField(f.field, v)}>
+                  <Select disabled={readOnly} value={order[f.field] || f.statuses[0]} onValueChange={(v) => updateField(f.field, v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {f.statuses.map((s) => {
@@ -94,6 +98,8 @@ export default function ProcurementSection({ orderId, order, onRefresh }: Procur
                     <Input
                       type="date"
                       defaultValue={order[f.dateField] || ""}
+                      readOnly={readOnly}
+                      className={cn(readOnly && "bg-muted")}
                       onBlur={(e) => updateField(f.dateField, e.target.value || null)}
                     />
                   </div>
@@ -106,6 +112,8 @@ export default function ProcurementSection({ orderId, order, onRefresh }: Procur
           <Label className="text-xs text-muted-foreground">Procurement Remarks</Label>
           <Textarea
             defaultValue={order.procurement_remarks || ""}
+            readOnly={readOnly}
+            className={cn(readOnly && "bg-muted")}
             rows={2}
             onBlur={(e) => {
               if (e.target.value !== (order.procurement_remarks || "")) updateField("procurement_remarks", e.target.value);

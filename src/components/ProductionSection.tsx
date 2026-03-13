@@ -26,9 +26,10 @@ interface Props {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  readOnly?: boolean;
 }
 
-export default function ProductionSection({ orderId, order, onRefresh }: Props) {
+export default function ProductionSection({ orderId, order, onRefresh, readOnly }: Props) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingStage, setAddingStage] = useState<string | null>(null);
@@ -130,9 +131,9 @@ export default function ProductionSection({ orderId, order, onRefresh }: Props) 
                   variant="outline"
                   className="mt-2 text-xs h-7"
                   onClick={() => { setAddingStage(stage); setEntryWindows(""); setEntryRemarks(""); }}
-                  disabled={(stageTotals[stage] || 0) >= atw}
+                  disabled={readOnly || (stageTotals[stage] || 0) >= atw}
                 >
-                  Add Entry
+                  {readOnly ? "View Only" : "Add Entry"}
                 </Button>
               </div>
             ))}
