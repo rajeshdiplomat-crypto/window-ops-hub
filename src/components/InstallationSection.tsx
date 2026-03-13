@@ -10,14 +10,18 @@ import {
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 import { format } from "date-fns";
+import OrderActivityLog from "./OrderActivityLog";
+
+import StatusDropdown from "./StatusDropdown";
 
 interface Props {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  updateOrder: (field: string, value: any) => void;
 }
 
-export default function InstallationSection({ orderId, order, onRefresh }: Props) {
+export default function InstallationSection({ orderId, order, onRefresh, updateOrder }: Props) {
   const [installLogs, setInstallLogs] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +183,8 @@ export default function InstallationSection({ orderId, order, onRefresh }: Props
           )}
         </CardContent>
       </Card>
-    </div>
+
+      <OrderActivityLog orderId={orderId} module="Installation" refreshKey={order.updated_at || order.created_at} />
+    </div >
   );
 }

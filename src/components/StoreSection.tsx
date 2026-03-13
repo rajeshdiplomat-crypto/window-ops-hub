@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 
-const AVAILABILITY_VALUES = ["No", "Yes", "Partially Available", "Delivered"];
+const AVAILABILITY_VALUES = ["Pending PO", "PO Placed", "Partially Available", "In Stock / Available", "Not Required"];
+const COATING_VALUES = ["Pending Coating", "Sent to Coating", "Partially Available", "In Stock / Available", "Not Required"];
 
 const FIELDS = [
   { label: "Hardware Availability", field: "hardware_availability" },
@@ -27,7 +28,26 @@ export default function StoreSection({ orderId, order, onRefresh }: StoreSection
   const updateField = async (field: string, value: string) => {
     const oldValue = order[field];
     if (String(oldValue ?? "") === String(value ?? "")) return;
-    const { error } = await supabase.from("orders").update({ [field]: value } as any).eq("id", orderId);
+
+    const updates: Record<string, any> = { [field]: value };
+
+    // Unified Auto-sync: 
+    // Since Store and Procurement now share the exact same values,
+    // whatever Store sets here is pushed exactly to Procurement.
+    const procurementFieldMap: Record<string, string> = {
+      hardware_availability: "hardware_po_status",
+      extrusion_availability: "extrusion_po_status",
+      glass_availability: "glass_po_status",
+      coated_extrusion_availability: "coating_status",
+    };
+
+    const poField = procurementFieldMap[field];
+    if (poField && order[poField] !== value) {
+      updates[poField] = value;
+      await logActivity({ orderId, module: "Store -> Procurement AutoSync", fieldName: poField, oldValue: String(order[poField] ?? ""), newValue: value });
+    }
+
+    const { error } = await supabase.from("orders").update(updates as any).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     await logActivity({ orderId, module: "Store", fieldName: field, oldValue: String(oldValue ?? ""), newValue: value });
     toast.success("Updated");
@@ -41,17 +61,39 @@ export default function StoreSection({ orderId, order, onRefresh }: StoreSection
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {FIELDS.map((f) => (
-            <div key={f.field} className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{f.label}</Label>
-              <Select value={order[f.field] || "No"} onValueChange={(v) => updateField(f.field, v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {AVAILABILITY_VALUES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+          {FIELDS.map((f) => {
+            const currentVal = order[f.field];
+            const isCurrentlyAvailable = currentVal === "Yes" || currentVal === "Delivered";
+
+            return (
+              <div key={f.field} className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                <Select value={order[f.field] || "No"} onValueChange={(v) => updateField(f.field, v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(f.field === "coated_extrusion_availability" ? COATING_VALUES : AVAILABILITY_VALUES).map((s) => {
+                      let isDisabledOption = false;
+                      let tooltipText = "";
+
+                      if (f.field === "coated_extrusion_availability" && (s === "Sent to Coating" || s === "Partially Available" || s === "In Stock / Available")) {
+                        const hasExtrusion = order.extrusion_availability === "In Stock / Available";
+                        if (!hasExtrusion) {
+                          isDisabledOption = true;
+                          tooltipText = " (Req. Extrusion)";
+                        }
+                      }
+
+                      return (
+                        <SelectItem key={s} value={s} disabled={isDisabledOption}>
+                          {s}{tooltipText}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Store Remarks</Label>

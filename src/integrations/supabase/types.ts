@@ -700,7 +700,7 @@ export type Database = {
           glazing: number
           id: string
           order_id: string
-          packing: number
+          Packed: number
           qc: number
           unit: string | null
         }
@@ -710,7 +710,7 @@ export type Database = {
           glazing?: number
           id?: string
           order_id: string
-          packing?: number
+          Packed?: number
           qc?: number
           unit?: string | null
         }
@@ -720,7 +720,7 @@ export type Database = {
           glazing?: number
           id?: string
           order_id?: string
-          packing?: number
+          Packed?: number
           qc?: number
           unit?: string | null
         }

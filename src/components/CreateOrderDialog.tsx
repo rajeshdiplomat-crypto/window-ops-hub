@@ -27,6 +27,7 @@ interface CreateOrderDialogProps {
 export default function CreateOrderDialog({ open, onOpenChange, onCreated }: CreateOrderDialogProps) {
   const [orderType, setOrderType] = useState<"Retail" | "Project">("Retail");
   const [orderName, setOrderName] = useState("");
+  const [lotName, setLotName] = useState("");
   const [orderOwner, setOrderOwner] = useState("");
   const [quoteNo, setQuoteNo] = useState("");
   const [colourShade, setColourShade] = useState("");
@@ -80,6 +81,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
   const resetForm = () => {
     setOrderType("Retail");
     setOrderName("");
+    setLotName("");
     setOrderOwner("");
     setQuoteNo("");
     setColourShade("");
@@ -95,9 +97,21 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderName.trim()) return toast.error("Order Name is required");
+    if (orderType === "Retail" && !orderName.trim()) return toast.error("Project/Order Name is required");
+    if (orderType === "Project" && (!orderName.trim() || !lotName.trim())) return toast.error("Project Name and Lot Name are required");
     if (selectedProducts.length === 0) return toast.error("Select at least one product");
     if (advanceReceived && Number(advanceAmount) > Number(orderValue)) return toast.error("Advance cannot exceed Order Value");
+
+    const finalOrderName = orderType === "Project" ? `${orderName.trim()} - ${lotName.trim()}` : orderName.trim();
+
+    // Validate duplicate Project + Lot / Retail Order
+    const { data: existingName } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("order_name", finalOrderName)
+      .maybeSingle();
+
+    if (existingName) return toast.error(`Order Name "${finalOrderName}" already exists`);
 
     if (quoteNo.trim()) {
       const { data: existing } = await supabase
@@ -111,7 +125,7 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
     setSubmitting(true);
     const payload: Record<string, any> = {
       order_type: orderType,
-      order_name: orderName.trim(),
+      order_name: finalOrderName,
       dealer_name: orderOwner,
       quote_no: quoteNo.trim() || null,
       colour_shade: colourShade || null,
@@ -167,18 +181,18 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
                 <Label className="text-sm font-medium">Order Type</Label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox checked={orderType === "Retail"} onCheckedChange={() => { setOrderType("Retail"); setOrderName(""); }} />
+                    <Checkbox checked={orderType === "Retail"} onCheckedChange={() => { setOrderType("Retail"); setOrderName(""); setLotName(""); }} />
                     <span className="text-sm">Retail</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox checked={orderType === "Project"} onCheckedChange={() => { setOrderType("Project"); setOrderName(""); }} />
+                    <Checkbox checked={orderType === "Project"} onCheckedChange={() => { setOrderType("Project"); setOrderName(""); setLotName(""); }} />
                     <span className="text-sm">Project</span>
                   </label>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm">Order Name *</Label>
+                <Label className="text-sm">{orderType === "Project" ? "Project Name *" : "Order Name *"}</Label>
                 {orderType === "Retail" ? (
                   <Input value={orderName} onChange={(e) => setOrderName(e.target.value)} placeholder="Enter order name" required />
                 ) : (
@@ -192,6 +206,13 @@ export default function CreateOrderDialog({ open, onOpenChange, onCreated }: Cre
                   </Select>
                 )}
               </div>
+
+              {orderType === "Project" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Lot Name *</Label>
+                  <Input value={lotName} onChange={(e) => setLotName(e.target.value)} placeholder="e.g. Tower A - Phase 1" required />
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label className="text-sm">Order Owner</Label>

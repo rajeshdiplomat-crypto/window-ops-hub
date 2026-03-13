@@ -11,14 +11,15 @@ import {
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 import { format } from "date-fns";
+import OrderActivityLog from "./OrderActivityLog";
 
-const STAGES = ["Cutting", "Assembly", "Glazing", "Quality", "Packing"] as const;
-const STAGE_ORDER: Record<string, number> = { Cutting: 0, Assembly: 1, Glazing: 2, Quality: 3, Packing: 4 };
+const STAGES = ["Cutting", "Assembly", "Glazing", "Quality", "Packed"] as const;
+const STAGE_ORDER: Record<string, number> = { Cutting: 0, Assembly: 1, Glazing: 2, Quality: 3, Packed: 4 };
 const STAGE_PREREQ: Record<string, string> = {
   Assembly: "Cutting",
   Glazing: "Assembly",
   Quality: "Glazing",
-  Packing: "Quality",
+  Packed: "Quality",
 };
 
 interface Props {
@@ -194,6 +195,8 @@ export default function ProductionSection({ orderId, order, onRefresh }: Props) 
           )}
         </CardContent>
       </Card>
+
+      <OrderActivityLog orderId={orderId} module="Production" refreshKey={order.updated_at || order.created_at} />
     </div>
   );
 }

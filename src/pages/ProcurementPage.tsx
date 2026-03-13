@@ -14,8 +14,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportDataToExcel } from "@/lib/excelUtils";
 
 interface Order {
   id: string;
@@ -28,7 +29,6 @@ interface Order {
   salesperson: string | null;
   product_type: string;
   total_windows: number;
-  windows_released: number;
   sqft: number;
   order_value: number;
   hardware_po_status: string;
@@ -40,6 +40,7 @@ interface Order {
   glass_delivery_date: string | null;
   coating_delivery_date: string | null;
   procurement_remarks: string | null;
+  design_released_windows: number;
 }
 
 interface Filters {
@@ -49,12 +50,12 @@ interface Filters {
 
 const emptyFilters: Filters = { salesperson: "", orderOwner: "" };
 
-const PO_STATUSES = ["Not Required", "PO Placed", "Delivered"];
-const COATING_STATUSES = ["Not Required", "Sent to Coating", "Delivered"];
+const PO_STATUSES = ["Pending PO", "PO Placed", "Delivered", "In Stock / Available", "Not Required"];
+const COATING_STATUSES = ["Pending Coating", "Sent to Coating", "Delivered", "In Stock / Available", "Not Required"];
 
 const poColor = (status: string) => {
-  if (status === "Delivered") return "bg-success/15 text-success border-success/20";
-  if (status === "PO Placed" || status === "Sent to Coating") return "bg-warning/15 text-warning border-warning/20";
+  if (status === "Delivered" || status === "In Stock / Available") return "bg-success/15 text-success border-success/20";
+  if (status === "PO Placed" || status === "Sent to Coating" || status === "Partially Available") return "bg-warning/15 text-warning border-warning/20";
   return "bg-muted text-muted-foreground";
 };
 
@@ -64,11 +65,10 @@ const formatPoDisplay = (status: string, date: string | null) => {
   return status;
 };
 
-const isPoPending = (o: Order) =>
-  o.hardware_po_status === "Not Required" &&
-  o.extrusion_po_status === "Not Required" &&
-  o.glass_po_status === "Not Required" &&
-  o.coating_status === "Not Required";
+const isPoPending = (o: Order) => {
+  const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
+  return statuses.some((s) => s === "Pending PO" || s === "Pending Coating" || s === "Partially Available");
+};
 
 const isDeliveryPending = (o: Order) => {
   const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
@@ -77,7 +77,8 @@ const isDeliveryPending = (o: Order) => {
 
 const isCompleted = (o: Order) => {
   const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
-  return statuses.every((s) => s === "Delivered" || s === "Not Required") && statuses.some((s) => s === "Delivered");
+  return statuses.every((s) => s === "Delivered" || s === "In Stock / Available" || s === "Not Required") &&
+    statuses.some((s) => s === "Delivered" || s === "In Stock / Available");
 };
 
 export default function ProcurementPage() {
@@ -92,7 +93,11 @@ export default function ProcurementPage() {
   const fetchData = async () => {
     const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
     if (error) toast.error("Failed to load orders");
-    else setOrders((data as unknown as Order[]) || []);
+    else {
+      // Only show orders where design has been released (ATW > 0)
+      const all = (data as unknown as Order[]) || [];
+      setOrders(all.filter((o) => (o.design_released_windows || 0) > 0));
+    }
     setLoading(false);
   };
 
@@ -116,8 +121,8 @@ export default function ProcurementPage() {
     if (search) {
       const s = search.toLowerCase();
       if (!o.order_name.toLowerCase().includes(s) &&
-          !o.dealer_name.toLowerCase().includes(s) &&
-          !(o.quote_no || "").toLowerCase().includes(s)) return false;
+        !o.dealer_name.toLowerCase().includes(s) &&
+        !(o.quote_no || "").toLowerCase().includes(s)) return false;
     }
     if (filters.salesperson && o.salesperson !== filters.salesperson) return false;
     if (filters.orderOwner && o.dealer_name !== filters.orderOwner) return false;
@@ -126,11 +131,40 @@ export default function ProcurementPage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  const handleExport = () => {
+    const headers = [
+      "Order", "Owner", "Salesperson", "Hardware PO", "Extrusion PO", "Glass PO", "Coating",
+      "H-Deliv", "E-Deliv", "G-Deliv", "C-Deliv", "Remarks"
+    ];
+    const data = filtered.map(o => ({
+      "Order": o.order_name,
+      "Owner": o.dealer_name,
+      "Salesperson": o.salesperson || "",
+      "Hardware PO": o.hardware_po_status,
+      "Extrusion PO": o.extrusion_po_status,
+      "Glass PO": o.glass_po_status,
+      "Coating": o.coating_status,
+      "H-Deliv": o.hardware_delivery_date || "",
+      "E-Deliv": o.extrusion_delivery_date || "",
+      "G-Deliv": o.glass_delivery_date || "",
+      "C-Deliv": o.coating_delivery_date || "",
+      "Remarks": o.procurement_remarks || ""
+    }));
+    exportDataToExcel(data, headers, `procurement_export_${tab}.xlsx`);
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Procurement</h1>
-        <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Procurement</h1>
+          <p className="text-sm text-muted-foreground">{orders.length} total orders</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExport}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -216,7 +250,7 @@ export default function ProcurementPage() {
                   <TableCell className="text-sm">{order.salesperson || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[180px] truncate" title={order.product_type}>{order.product_type}</TableCell>
                   <TableCell className="text-right">{order.total_windows}</TableCell>
-                  <TableCell className="text-right">{order.windows_released}</TableCell>
+                  <TableCell className="text-right">{order.design_released_windows}</TableCell>
                   <TableCell className="text-right">{Number(order.sqft).toFixed(1)}</TableCell>
                   <TableCell className="text-right font-medium">₹{Number(order.order_value).toLocaleString()}</TableCell>
                   <TableCell><Badge variant="outline" className={`text-xs ${poColor(order.hardware_po_status)}`}>{formatPoDisplay(order.hardware_po_status, order.hardware_delivery_date)}</Badge></TableCell>

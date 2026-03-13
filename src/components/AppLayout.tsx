@@ -34,7 +34,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Map each nav item to the roles that can see it. Empty = visible to all.
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/", group: 0, roles: [] as string[] },
+  { label: "Operations Hub", icon: LayoutDashboard, path: "/", group: 0, roles: [] as string[] },
   { label: "Orders", icon: Package, path: "/orders", group: 0, roles: [] },
   { label: "Sales", icon: Package, path: "/sales", group: 1, roles: ["sales"] },
   { label: "Finance", icon: DollarSign, path: "/finance", group: 1, roles: ["finance"] },
@@ -90,11 +90,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <Link
         key={path}
         to={path}
-        className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-          active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-        }`}
+        className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          }`}
       >
         <Icon className="h-4 w-4" />
         {label}
@@ -143,12 +142,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
-                  <User className="h-4 w-4" />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer">
                 <LogOut className="h-4 w-4" />

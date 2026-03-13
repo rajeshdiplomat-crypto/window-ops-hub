@@ -160,6 +160,73 @@ export default function GeneralSettingsPage() {
         </Card>
       )}
 
+      {/* Rework Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Rework Categories</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={editValues["rework_categories"] || "Manufacturing, Design, Survey, Installation, Damage"}
+                onChange={(e) => setEditValues({ ...editValues, rework_categories: e.target.value })}
+                className="flex-1"
+                placeholder="Comma separated values"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!settings.find(s => s.key === "rework_categories")) {
+                    // If setting doesn't exist, we might need a different approach or assume it exists
+                    toast.error("Rework categories setting not found in DB");
+                  } else {
+                    save("rework_categories");
+                  }
+                }}
+              >
+                <Save className="h-3.5 w-3.5 mr-1" /> Save
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">List items separated by commas (e.g., Glass, Frame, Lock)</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rework Responsible Teams */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Rework Responsible Teams</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={editValues["rework_responsible_teams"] || "Factory, Sales, Installation Team, Logistics"}
+                onChange={(e) => setEditValues({ ...editValues, rework_responsible_teams: e.target.value })}
+                className="flex-1"
+                placeholder="Comma separated values"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (!settings.find(s => s.key === "rework_responsible_teams")) {
+                    toast.error("Rework responsible teams setting not found in DB");
+                  } else {
+                    save("rework_responsible_teams");
+                  }
+                }}
+              >
+                <Save className="h-3.5 w-3.5 mr-1" /> Save
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">List teams separated by commas (e.g., Factory, Site, Sales)</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Commercial Statuses */}
       <ConfigList table="commercial_statuses" title="Commercial Statuses" />
 

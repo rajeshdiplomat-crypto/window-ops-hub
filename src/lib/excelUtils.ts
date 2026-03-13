@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Column mapping: Excel header → DB field */
 const FIELD_MAP: Record<string, string> = {
+  // Sales / General
   "Order Type": "order_type",
   "Order Name": "order_name",
   "Order Owner": "dealer_name",
   "Quotation No": "quote_no",
+  "SO No": "sales_order_no",
   "Colour Shade": "colour_shade",
   "Salesperson": "salesperson",
   "Product Type": "product_type",
@@ -15,6 +17,25 @@ const FIELD_MAP: Record<string, string> = {
   "Order Value": "order_value",
   "Receipt": "advance_received",
   "Commercial Status": "commercial_status",
+
+  // Department Statuses
+  "Survey Status": "survey_status",
+  "Survey Done Win": "survey_done_windows",
+  "Design Status": "design_status",
+  "ATW Win": "design_released_windows",
+  "Finance Status": "finance_status",
+  "Hardware Avl": "hardware_availability",
+  "Extrusion Avl": "extrusion_availability",
+  "Glass Avl": "glass_availability",
+  "Coated Extrusion Avl": "coated_extrusion_availability",
+  "Hardware PO": "hardware_po_status",
+  "Extrusion PO": "extrusion_po_status",
+  "Glass PO": "glass_po_status",
+  "Coating Status": "coating_status",
+  "Prod Approval": "approval_for_production",
+  "Disp Approval": "approval_for_dispatch",
+  "Dispatch Status": "dispatch_status",
+  "Installation Status": "installation_status",
 };
 
 const IMPORT_HEADERS = Object.keys(FIELD_MAP);
@@ -108,45 +129,55 @@ export async function importOrdersFromFile(file: File): Promise<ImportResult> {
   return result;
 }
 
-/** Export orders to an .xlsx file download.
- *  receiptMap: order_id → sum of confirmed payments. Pass from caller. */
+/** Comprehensive export for Global Order dashboard */
 export function exportOrdersToExcel(
   orders: Record<string, any>[],
   receiptMap: Record<string, number> = {},
-  filename = "orders.xlsx",
+  filename = "orders.xlsx"
 ) {
   const exportRows = orders.map((o) => {
     const receipt = receiptMap[o.id] ?? 0;
     const balance = (Number(o.order_value) || 0) - receipt;
-    return {
-      "Order Type": o.order_type || "Retail",
-      "Order Name": o.order_name || "",
-      "Commercial Status": o.commercial_status || "",
-      "Order Owner": o.dealer_name || "",
-      "Quotation No": o.quote_no || "",
-      "SO No": o.sales_order_no || "",
-      "Colour Shade": o.colour_shade || "",
-      "Salesperson": o.salesperson || "",
-      "Product Type": o.product_type || "",
-      "No of Windows": o.total_windows || 0,
-      "Avl to Work": o.design_released_windows || 0,
-      "Sqft": o.sqft || 0,
-      "Order Value": o.order_value || 0,
-      "Receipt": receipt,
-      "Balance": balance,
-      "Dispatch Status": o.dispatch_status || "Not Dispatched",
-    };
+
+    // Create an object with all fields from FIELD_MAP
+    const row: Record<string, any> = {};
+    for (const [header, field] of Object.entries(FIELD_MAP)) {
+      row[header] = o[field] ?? "";
+    }
+
+    // Add calculated fields
+    row["Receipt"] = receipt;
+    row["Balance"] = balance;
+
+    return row;
   });
 
-  const ws = XLSX.utils.json_to_sheet(exportRows, { header: EXPORT_HEADERS });
+  const headers = [...Object.keys(FIELD_MAP), "Balance"];
 
-  const colWidths = EXPORT_HEADERS.map((h) => ({
-    wch: Math.max(h.length, ...exportRows.map((r) => String((r as any)[h]).length)),
+  const ws = XLSX.utils.json_to_sheet(exportRows, { header: headers });
+
+  const colWidths = headers.map((h) => ({
+    wch: Math.max(h.length, ...exportRows.map((r) => String(r[h] ?? "").length)),
   }));
   ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Orders");
+  XLSX.writeFile(wb, filename);
+}
+
+/** Generic export for module-specific dashboards */
+export function exportDataToExcel(data: any[], headers: string[], filename: string) {
+  const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+
+  // Auto-width
+  const colWidths = headers.map((h) => ({
+    wch: Math.max(h.length, ...data.map((r) => String(r[h] ?? "").length)),
+  }));
+  ws["!cols"] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data");
   XLSX.writeFile(wb, filename);
 }
 

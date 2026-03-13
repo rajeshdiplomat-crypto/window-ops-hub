@@ -7,10 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 
-export default function SurveySection({ orderId, order, onRefresh }: {
+import StatusDropdown from "./StatusDropdown";
+import OrderActivityLog from "./OrderActivityLog";
+
+export default function SurveySection({ orderId, order, onRefresh, updateOrder }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  updateOrder: (field: string, value: any) => void;
 }) {
   const totalWindows = order.total_windows || 0;
   const surveyDone = order.survey_done_windows || 0;
@@ -108,6 +112,8 @@ export default function SurveySection({ orderId, order, onRefresh }: {
           </div>
         </CardContent>
       </Card>
+
+      <OrderActivityLog orderId={orderId} module="Survey" refreshKey={order.updated_at || order.created_at} />
     </div>
   );
 }

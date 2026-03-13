@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -48,92 +48,184 @@ interface Order {
   extrusion_availability: string;
   glass_availability: string;
   coated_extrusion_availability: string;
+  hardware_po_status: string;
+  hardware_delivery_date: string | null;
+  extrusion_po_status: string;
+  extrusion_delivery_date: string | null;
+  glass_po_status: string;
+  glass_delivery_date: string | null;
+  coating_status: string;
+  coating_delivery_date: string | null;
+  approval_for_production: string;
+  approval_for_dispatch: string;
   created_at: string;
 }
 
 interface AggregatedOrder extends Order {
   receipt: number;
   balance: number;
-  surveyLabel: string;
-  designLabel: string;
-  materialsLabel: string;
-  productionLabel: string;
+  surveyDone: number;
+  designReleased: number;
   productionPacked: number;
-  dispatchLabel: string;
+  atw: number;
   dispatchedWindows: number;
-  installationLabel: string;
   installedWindows: number;
-  reworkLabel: string;
   reworkOpenCount: number;
+  reworkTotalCount: number;
+  materialsStatus: "Ready" | "Partial" | "Pending";
+  dispatchLabel: string;
   nextAction: string;
 }
 
 // ── Status helpers ──
 
-function getSurveyStatus(o: Order): string {
-  if (o.survey_done_windows <= 0) return "Pending";
-  if (o.survey_done_windows < o.total_windows) return "Partial";
-  return "Complete";
-}
-
-function getDesignStatus(o: Order): string {
-  if (o.design_released_windows <= 0) return "Pending";
-  if (o.design_released_windows < o.survey_done_windows) return "Partial";
-  return "Complete";
-}
-
-function getMaterialsStatus(o: Order): string {
+function getMaterialsStatus(o: Order): "Ready" | "Partial" | "Pending" {
   const items = [o.hardware_availability, o.extrusion_availability, o.glass_availability, o.coated_extrusion_availability];
-  const ready = items.filter((s) => s === "Yes" || s === "Delivered");
+  const ready = items.filter((s) => s === "In Stock / Available" || s === "Not Required");
   if (ready.length === items.length) return "Ready";
-  if (ready.length > 0 || items.some((s) => s === "Partially Available")) return "Partial";
+  if (ready.length > 0 || items.some((s) => s === "Partially Available" || s === "PO Placed" || s === "Sent to Coating")) return "Partial";
   return "Pending";
 }
 
-function getDispatchLabel(dispatched: number, packed: number): string {
+function getDispatchLabel(dispatched: number, atw: number): string {
   if (dispatched <= 0) return "Not Dispatched";
-  if (dispatched < packed) return "Partial";
-  return "Complete";
-}
-
-function getInstallationLabel(installed: number, dispatched: number): string {
-  if (installed <= 0) return "Not Installed";
-  if (dispatched > 0 && installed < dispatched) return "Partial";
-  if (dispatched > 0 && installed >= dispatched) return "Complete";
-  return "Not Installed";
-}
-
-function getReworkLabel(openCount: number, totalCount: number): string {
-  if (totalCount === 0) return "None";
-  if (openCount > 0) return "Open";
-  return "Closed";
+  if (dispatched < atw) return "Partially Dispatched";
+  return "Fully Dispatched";
 }
 
 function getNextAction(agg: AggregatedOrder): string {
-  if (agg.surveyLabel !== "Complete") return "Survey";
-  if (agg.designLabel !== "Complete") return "Design";
-  if (agg.materialsLabel !== "Ready") return "Procurement";
-  if (agg.productionPacked < agg.total_windows) return "Production";
-  if (agg.dispatchLabel !== "Complete") return "Dispatch";
-  if (agg.installationLabel !== "Complete") return "Installation";
-  if (agg.reworkLabel === "Open") return "Rework";
+  if (agg.surveyDone < agg.total_windows) return "Survey";
+  if (agg.designReleased < agg.surveyDone) return "Design";
+  if (agg.materialsStatus !== "Ready") return "Procurement";
+  if (agg.productionPacked < agg.atw) return "Production";
+  if (agg.dispatchLabel !== "Fully Dispatched") return "Dispatch";
+  if (agg.installedWindows < agg.dispatchedWindows) return "Installation";
+  if (agg.reworkOpenCount > 0) return "Rework";
   return "—";
 }
 
-// ── Badge color helpers ──
-
-function statusBadgeClass(label: string): string {
-  const l = label.toLowerCase();
-  if (["pending", "not dispatched", "not installed", "none"].includes(l)) return "bg-muted text-muted-foreground";
-  if (["partial", "open"].includes(l)) return "bg-blue-500/15 text-blue-600 border-blue-500/20";
-  if (["ready", "complete", "closed"].includes(l)) return "bg-emerald-500/15 text-emerald-600 border-emerald-500/20";
-  if (["blocked"].includes(l)) return "bg-destructive/15 text-destructive border-destructive/20";
-  return "bg-muted text-muted-foreground";
+// ── Dot indicator helper ──
+// Returns a colored dot span
+function Dot({ status }: { status: "green" | "amber" | "grey" | "red" }) {
+  const cls =
+    status === "green" ? "bg-emerald-500" :
+      status === "amber" ? "bg-amber-400" :
+        status === "red" ? "bg-red-500" :
+          "bg-slate-300";
+  return <span className={`inline-block w-2 h-2 rounded-full ${cls} mr-1.5 flex-shrink-0`} />;
 }
 
-function nextActionBadgeClass(action: string): string {
-  if (action === "—") return "bg-muted text-muted-foreground";
-  return "bg-amber-500/15 text-amber-700 border-amber-500/20";
+// Returns a status cell with dot + ratio (e.g. "● 8/20")
+function StatusCell({ done, total, label }: { done: number; total: number; label?: string }) {
+  const status = done <= 0 ? "grey" : done >= total && total > 0 ? "green" : "amber";
+  return (
+    <div className="flex items-center whitespace-nowrap text-sm">
+      <Dot status={status} />
+      <span className={status === "green" ? "text-emerald-700 font-medium" : status === "amber" ? "text-amber-700" : "text-muted-foreground"}>
+        {label ?? `${done}/${total}`}
+      </span>
+    </div>
+  );
+}
+
+// Materials detail showing H, E, G, C indicators with PO status integrated
+function MaterialsStatusDetail({ o }: { o: Order }) {
+  const getDot = (avail: string, po: string, delivery: string | null): string => {
+    // 1. Blue: Delivered
+    if (avail === "Delivered" || po === "Delivered") return "blue";
+
+    // 2. Green: In stock/avl or Not required
+    if (avail === "In Stock / Available" || avail === "Not Required" || po === "Not Required") return "green";
+
+    // 3. Yellow: partially avl
+    if (avail === "Partially Available" || po === "Partially Available") return "yellow";
+
+    // 4. Orange: PO placed or Sent to coating
+    if (avail === "PO Placed" || avail === "Sent to Coating" || po === "PO Placed" || po === "Sent to Coating") return "orange";
+
+    // 5. Red: pending PO or Pending coating
+    if (avail === "Pending PO" || avail === "Pending Coating" || po === "Pending PO" || po === "Pending Coating") return "red";
+
+    return "grey";
+  };
+
+  const items = [
+    { label: "H", avl: o.hardware_availability, po: o.hardware_po_status, date: o.hardware_delivery_date },
+    { label: "E", avl: o.extrusion_availability, po: o.extrusion_po_status, date: o.extrusion_delivery_date },
+    { label: "G", avl: o.glass_availability, po: o.glass_po_status, date: o.glass_delivery_date },
+    { label: "C", avl: o.coated_extrusion_availability, po: o.coating_status, date: o.coating_delivery_date },
+  ];
+
+  return (
+    <div className="flex gap-1" title="H: Hardware, E: Extrusion, G: Glass, C: Coating">
+      {items.map((item, i) => {
+        const dot = getDot(item.avl, item.po, item.date);
+        const tooltip = `${item.label}: ${item.avl || item.po}${item.date ? ` (Del: ${item.date})` : ""}`;
+
+        const colorClass =
+          dot === "blue" ? "bg-blue-500" :
+            dot === "green" ? "bg-emerald-500" :
+              dot === "orange" ? "bg-orange-500" :
+                dot === "red" ? "bg-red-500" :
+                  dot === "yellow" ? "bg-yellow-400" :
+                    "bg-slate-300";
+
+        return (
+          <div key={i} title={tooltip} className={`w-4 h-4 rounded-sm flex items-center justify-center text-[10px] font-bold text-white shadow-sm ${colorClass}`}>
+            {item.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Commercial status cell (formerly Finance status)
+function CommercialStatusCell({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+  const dotStatus: "green" | "amber" | "grey" =
+    s.includes("approved") || s.includes("finance approved") ? "green" :
+      s.includes("hold") || s.includes("deviation") ? "amber" : "grey";
+  const cls =
+    dotStatus === "green" ? "text-emerald-700 font-medium" :
+      dotStatus === "amber" ? "text-amber-700" : "text-muted-foreground";
+  return (
+    <div className="flex items-center whitespace-nowrap text-sm">
+      <Dot status={dotStatus} />
+      <span className={cls}>{status || "Draft"}</span>
+    </div>
+  );
+}
+
+// Approval cell for Production/Dispatch
+function ApprovalCell({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+  const dotStatus: "green" | "grey" | "amber" =
+    s === "approved" ? "green" :
+      s === "hold" ? "amber" : "grey";
+
+  return (
+    <div className="flex items-center text-xs">
+      <Dot status={dotStatus} />
+      <span className={dotStatus === "green" ? "text-emerald-700 font-medium" : s === "hold" ? "text-amber-700" : "text-muted-foreground"}>
+        {status || "Pending"}
+      </span>
+    </div>
+  );
+}
+
+// Rework dot
+function ReworkDot({ open, total }: { open: number; total: number }) {
+  if (total === 0) return <span className="text-muted-foreground text-sm">—</span>;
+  const status = open > 0 ? "red" : "green";
+  return (
+    <div className="flex items-center whitespace-nowrap text-sm">
+      <Dot status={status} />
+      <span className={open > 0 ? "text-red-600" : "text-emerald-700 font-medium"}>
+        {open > 0 ? `${open} Open` : "Closed"}
+      </span>
+    </div>
+  );
 }
 
 // ── Filters ──
@@ -141,13 +233,12 @@ function nextActionBadgeClass(action: string): string {
 interface Filters {
   salesperson: string;
   orderOwner: string;
-  dispatchStatus: string;
-  installationStatus: string;
-  reworkStatus: string;
+  orderType: string;
+  approvalProduction: string;
 }
 
 const emptyFilters: Filters = {
-  salesperson: "", orderOwner: "", dispatchStatus: "", installationStatus: "", reworkStatus: "",
+  salesperson: "", orderOwner: "", orderType: "", approvalProduction: "",
 };
 
 // ── Component ──
@@ -193,7 +284,7 @@ export default function OrdersDashboard() {
     // Production packed map
     const packedMap: Record<string, number> = {};
     for (const p of (prodLogsRes.data || []) as any[]) {
-      if (p.stage === "Packing") packedMap[p.order_id] = (packedMap[p.order_id] || 0) + Number(p.windows_completed);
+      if (p.stage === "Packed") packedMap[p.order_id] = (packedMap[p.order_id] || 0) + Number(p.windows_completed);
     }
 
     // Dispatch map
@@ -226,22 +317,22 @@ export default function OrdersDashboard() {
       const installed = installMap[o.id] || 0;
       const openRework = reworkOpenMap[o.id] || 0;
       const totalRework = reworkTotalMap[o.id] || 0;
+      const atw = o.design_released_windows || 0;
 
       const partial: AggregatedOrder = {
         ...o,
         receipt,
         balance: Number(o.order_value) - receipt,
-        surveyLabel: getSurveyStatus(o),
-        designLabel: getDesignStatus(o),
-        materialsLabel: getMaterialsStatus(o),
-        productionLabel: `${packed} / ${o.total_windows}`,
+        surveyDone: o.survey_done_windows || 0,
+        designReleased: o.design_released_windows || 0,
         productionPacked: packed,
-        dispatchLabel: getDispatchLabel(dispatched, packed),
+        atw,
         dispatchedWindows: dispatched,
-        installationLabel: getInstallationLabel(installed, dispatched),
         installedWindows: installed,
-        reworkLabel: getReworkLabel(openRework, totalRework),
         reworkOpenCount: openRework,
+        reworkTotalCount: totalRework,
+        materialsStatus: getMaterialsStatus(o),
+        dispatchLabel: getDispatchLabel(dispatched, atw),
         nextAction: "",
       };
       partial.nextAction = getNextAction(partial);
@@ -263,9 +354,10 @@ export default function OrdersDashboard() {
 
   // Tab filtering
   const tabFiltered = aggregated.filter((o) => {
-    if (tab === "open") return o.dispatchLabel !== "Complete";
-    if (tab === "dispatched") return o.dispatchLabel === "Complete";
-    if (tab === "completed") return o.installationLabel === "Complete";
+    if (tab === "open") return o.dispatchLabel === "Not Dispatched" && o.installedWindows < o.dispatchedWindows || o.dispatchLabel === "Not Dispatched";
+    if (tab === "partially_dispatched") return o.dispatchLabel === "Partially Dispatched";
+    if (tab === "completely_dispatched") return o.dispatchLabel === "Fully Dispatched" && o.installedWindows < o.atw;
+    if (tab === "completed") return o.installedWindows >= o.atw && o.atw > 0;
     return true; // "all"
   });
 
@@ -275,14 +367,14 @@ export default function OrdersDashboard() {
       const s = search.toLowerCase();
       const matches = o.order_name.toLowerCase().includes(s) ||
         o.dealer_name.toLowerCase().includes(s) ||
-        (o.quote_no || "").toLowerCase().includes(s);
+        (o.quote_no || "").toLowerCase().includes(s) ||
+        (o.sales_order_no || "").toLowerCase().includes(s);
       if (!matches) return false;
     }
     if (filters.salesperson && o.salesperson !== filters.salesperson) return false;
     if (filters.orderOwner && o.dealer_name !== filters.orderOwner) return false;
-    if (filters.dispatchStatus && o.dispatchLabel !== filters.dispatchStatus) return false;
-    if (filters.installationStatus && o.installationLabel !== filters.installationStatus) return false;
-    if (filters.reworkStatus && o.reworkLabel !== filters.reworkStatus) return false;
+    if (filters.orderType && o.order_type !== filters.orderType) return false;
+    if (filters.approvalProduction && o.approval_for_production !== filters.approvalProduction) return false;
     return true;
   });
 
@@ -305,29 +397,49 @@ export default function OrdersDashboard() {
     }
   };
 
+  const handleExportFull = async () => {
+    // This uses the updated exportOrdersToExcel that includes all fields
+    const paymentMap: Record<string, number> = {};
+    aggregated.forEach(a => paymentMap[a.id] = a.receipt);
+    await exportOrdersToExcel(orders as any, paymentMap);
+  };
+
   return (
     <div className="p-6">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
-          <p className="text-sm text-muted-foreground">{aggregated.length} total orders</p>
+          <h1 className="text-2xl font-bold tracking-tight">Global Orders</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Total {orders.length} orders across all stages
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => downloadImportTemplate()}>
-            <FileSpreadsheet className="h-4 w-4" /> Template
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" disabled={importing} onClick={() => fileInputRef.current?.click()}>
-            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => exportOrdersToExcel(filtered)}>
-            <Download className="h-4 w-4" /> Export
-          </Button>
+
+        <div className="flex flex-wrap items-center gap-2">
           {canEdit && (
-            <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" /> New Order
+            <Button onClick={() => setDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" /> New Order
             </Button>
           )}
+
+          <Button variant="outline" onClick={handleExportFull}>
+            <Download className="mr-2 h-4 w-4" /> Full Data Export
+          </Button>
+
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            <Upload className="mr-2 h-4 w-4" /> Import Orders
+          </Button>
+
+          <Button variant="outline" onClick={downloadImportTemplate}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" /> Template
+          </Button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImport}
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+          />
         </div>
       </div>
 
@@ -360,9 +472,8 @@ export default function OrdersDashboard() {
             </div>
             <FilterSelect label="Salesperson" value={filters.salesperson} options={salespersons} onChange={(v) => setFilters({ ...filters, salesperson: v })} />
             <FilterSelect label="Owner" value={filters.orderOwner} options={owners} onChange={(v) => setFilters({ ...filters, orderOwner: v })} />
-            <FilterSelect label="Dispatch Status" value={filters.dispatchStatus} options={["Not Dispatched", "Partial", "Complete"]} onChange={(v) => setFilters({ ...filters, dispatchStatus: v })} />
-            <FilterSelect label="Installation Status" value={filters.installationStatus} options={["Not Installed", "Partial", "Complete"]} onChange={(v) => setFilters({ ...filters, installationStatus: v })} />
-            <FilterSelect label="Rework" value={filters.reworkStatus} options={["None", "Open", "Closed"]} onChange={(v) => setFilters({ ...filters, reworkStatus: v })} />
+            <FilterSelect label="Order Type" value={filters.orderType} options={["Supply", "Supply + Install", "Service"]} onChange={(v) => setFilters({ ...filters, orderType: v })} />
+            <FilterSelect label="Prod. Approval" value={filters.approvalProduction} options={["Pending", "Approved", "Hold"]} onChange={(v) => setFilters({ ...filters, approvalProduction: v })} />
           </PopoverContent>
         </Popover>
       </div>
@@ -370,8 +481,9 @@ export default function OrdersDashboard() {
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList>
-          <TabsTrigger value="open">Open Orders</TabsTrigger>
-          <TabsTrigger value="dispatched">Dispatched</TabsTrigger>
+          <TabsTrigger value="open">Open</TabsTrigger>
+          <TabsTrigger value="partially_dispatched">Partially Dispatched</TabsTrigger>
+          <TabsTrigger value="completely_dispatched">Completely Dispatched</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="all">All Orders</TabsTrigger>
         </TabsList>
@@ -385,18 +497,25 @@ export default function OrdersDashboard() {
               <TableHead className="min-w-[100px]">Quotation No</TableHead>
               <TableHead className="min-w-[80px]">SO No</TableHead>
               <TableHead className="min-w-[140px]">Order Name</TableHead>
+              <TableHead className="min-w-[80px]">Type</TableHead>
               <TableHead className="min-w-[110px]">Owner</TableHead>
               <TableHead className="min-w-[100px]">Salesperson</TableHead>
-              <TableHead className="text-right min-w-[60px]">Windows</TableHead>
+              <TableHead className="min-w-[100px]">Shade</TableHead>
+              <TableHead className="min-w-[130px]">Product Type</TableHead>
+              <TableHead className="text-right min-w-[60px]">Win</TableHead>
+              <TableHead className="text-right min-w-[50px]">ATW</TableHead>
               <TableHead className="text-right min-w-[90px]">Order Value</TableHead>
               <TableHead className="text-right min-w-[75px]">Receipt</TableHead>
               <TableHead className="text-right min-w-[75px]">Balance</TableHead>
-              <TableHead className="min-w-[80px]">Survey</TableHead>
-              <TableHead className="min-w-[80px]">Design</TableHead>
-              <TableHead className="min-w-[80px]">Materials</TableHead>
-              <TableHead className="min-w-[90px]">Production</TableHead>
-              <TableHead className="min-w-[95px]">Dispatch</TableHead>
-              <TableHead className="min-w-[95px]">Installation</TableHead>
+              <TableHead className="min-w-[120px]">Commercial Status</TableHead>
+              <TableHead className="min-w-[100px]">Prod. Appr</TableHead>
+              <TableHead className="min-w-[100px]">Disp. Appr</TableHead>
+              <TableHead className="min-w-[70px]">Survey</TableHead>
+              <TableHead className="min-w-[70px]">Design</TableHead>
+              <TableHead className="min-w-[90px]">Materials</TableHead>
+              <TableHead className="min-w-[80px]">Production</TableHead>
+              <TableHead className="min-w-[80px]">Dispatch</TableHead>
+              <TableHead className="min-w-[80px]">Install</TableHead>
               <TableHead className="min-w-[70px]">Rework</TableHead>
               <TableHead className="min-w-[100px]">Next Action</TableHead>
               {canEdit && <TableHead className="w-10" />}
@@ -405,11 +524,11 @@ export default function OrdersDashboard() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 18 : 17} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={canEdit ? 25 : 24} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canEdit ? 18 : 17} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
+                <TableCell colSpan={canEdit ? 25 : 24} className="text-center py-8 text-muted-foreground">No orders found</TableCell>
               </TableRow>
             ) : (
               filtered.map((o) => (
@@ -419,28 +538,46 @@ export default function OrdersDashboard() {
                   <TableCell>
                     <Link to={`/orders/${o.id}`} className="font-medium text-primary hover:underline">{o.order_name}</Link>
                   </TableCell>
-                  <TableCell className="text-sm">{o.dealer_name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">{o.order_type}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm truncate max-w-[120px]">{o.dealer_name}</TableCell>
                   <TableCell className="text-sm">{o.salesperson || "—"}</TableCell>
+                  <TableCell className="text-sm">{o.colour_shade || "—"}</TableCell>
+                  <TableCell className="text-sm truncate max-w-[140px]" title={o.product_type}>{o.product_type}</TableCell>
                   <TableCell className="text-right">{o.total_windows}</TableCell>
+                  <TableCell className="text-right font-medium">{o.atw}</TableCell>
                   <TableCell className="text-right font-medium">₹{Number(o.order_value).toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{o.receipt.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{o.balance.toLocaleString()}</TableCell>
-                  <TableCell><Badge variant="outline" className={statusBadgeClass(o.surveyLabel)}>{o.surveyLabel}</Badge></TableCell>
-                  <TableCell><Badge variant="outline" className={statusBadgeClass(o.designLabel)}>{o.designLabel}</Badge></TableCell>
-                  <TableCell><Badge variant="outline" className={statusBadgeClass(o.materialsLabel)}>{o.materialsLabel}</Badge></TableCell>
-                  <TableCell className="text-sm font-medium">{o.productionLabel}</TableCell>
-                  <TableCell><Badge variant="outline" className={statusBadgeClass(o.dispatchLabel)}>{o.dispatchLabel}</Badge></TableCell>
-                  <TableCell><Badge variant="outline" className={statusBadgeClass(o.installationLabel)}>{o.installationLabel}</Badge></TableCell>
                   <TableCell>
-                    {o.reworkLabel === "None" ? (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    ) : (
-                      <Badge variant="outline" className={statusBadgeClass(o.reworkLabel)}>
-                        {o.reworkLabel === "Open" ? `${o.reworkOpenCount} Open` : "Closed"}
-                      </Badge>
-                    )}
+                    <CommercialStatusCell status={o.commercial_status} />
                   </TableCell>
-                  <TableCell><Badge variant="outline" className={nextActionBadgeClass(o.nextAction)}>{o.nextAction}</Badge></TableCell>
+                  <TableCell>
+                    <ApprovalCell status={o.approval_for_production} />
+                  </TableCell>
+                  <TableCell>
+                    <ApprovalCell status={o.approval_for_dispatch} />
+                  </TableCell>
+                  {/* Survey: done / total_windows */}
+                  <TableCell><StatusCell done={o.surveyDone} total={o.total_windows} /></TableCell>
+                  {/* Design: released / survey_done */}
+                  <TableCell><StatusCell done={o.designReleased} total={o.surveyDone} /></TableCell>
+                  {/* Materials */}
+                  <TableCell><MaterialsStatusDetail o={o} /></TableCell>
+                  {/* Production: packed / atw */}
+                  <TableCell><StatusCell done={o.productionPacked} total={o.atw} /></TableCell>
+                  {/* Dispatch: dispatched / atw */}
+                  <TableCell><StatusCell done={o.dispatchedWindows} total={o.atw} /></TableCell>
+                  {/* Installation: installed / dispatched */}
+                  <TableCell><StatusCell done={o.installedWindows} total={o.dispatchedWindows} /></TableCell>
+                  {/* Rework */}
+                  <TableCell><ReworkDot open={o.reworkOpenCount} total={o.reworkTotalCount} /></TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={o.nextAction === "—" ? "bg-muted text-muted-foreground" : "bg-amber-500/15 text-amber-700 border-amber-500/20"}>
+                      {o.nextAction}
+                    </Badge>
+                  </TableCell>
                   {canEdit && (
                     <TableCell>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditOrder(o); }}>
