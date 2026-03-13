@@ -7,20 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 
+import { cn } from "@/lib/utils";
 import StatusDropdown from "./StatusDropdown";
 import OrderActivityLog from "./OrderActivityLog";
 
-export default function SurveySection({ orderId, order, onRefresh, updateOrder }: {
+export default function SurveySection({ orderId, order, onRefresh, updateOrder, readOnly }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
   updateOrder: (field: string, value: any) => void;
+  readOnly?: boolean;
 }) {
   const totalWindows = order.total_windows || 0;
   const surveyDone = order.survey_done_windows || 0;
   const surveyPending = Math.max(0, totalWindows - surveyDone);
 
   const updateField = async (field: string, value: any) => {
+    if (readOnly) return;
     const oldVal = order[field];
     if (String(oldVal ?? "") === String(value ?? "")) return;
 
@@ -93,6 +96,8 @@ export default function SurveySection({ orderId, order, onRefresh, updateOrder }
                 min={0}
                 max={totalWindows}
                 defaultValue={surveyDone}
+                readOnly={readOnly}
+                className={readOnly ? "bg-muted" : ""}
                 onBlur={(e) => updateField("survey_done_windows", Number(e.target.value) || 0)}
               />
             </div>
@@ -102,12 +107,13 @@ export default function SurveySection({ orderId, order, onRefresh, updateOrder }
             </div>
             <div className="space-y-1 col-span-2 md:col-span-1">
               <Label className="text-xs text-muted-foreground">Remarks</Label>
-              <Textarea
-                className="min-h-[60px]"
-                defaultValue={order.survey_remarks || ""}
-                onBlur={(e) => updateField("survey_remarks", e.target.value || null)}
-                placeholder="Survey notes..."
-              />
+                <Textarea
+                  defaultValue={order.survey_remarks || ""}
+                  readOnly={readOnly}
+                  className={cn("min-h-[60px]", readOnly && "bg-muted")}
+                  onBlur={(e) => updateField("survey_remarks", e.target.value || null)}
+                  placeholder={readOnly ? "" : "Survey notes..."}
+                />
             </div>
           </div>
         </CardContent>

@@ -22,10 +22,14 @@ interface StoreSectionProps {
   orderId: string;
   order: any;
   onRefresh: () => void;
+  readOnly?: boolean;
 }
 
-export default function StoreSection({ orderId, order, onRefresh }: StoreSectionProps) {
+import { cn } from "@/lib/utils";
+
+export default function StoreSection({ orderId, order, onRefresh, readOnly }: StoreSectionProps) {
   const updateField = async (field: string, value: string) => {
+    if (readOnly) return;
     const oldValue = order[field];
     if (String(oldValue ?? "") === String(value ?? "")) return;
 
@@ -68,7 +72,7 @@ export default function StoreSection({ orderId, order, onRefresh }: StoreSection
             return (
               <div key={f.field} className="space-y-1">
                 <Label className="text-xs text-muted-foreground">{f.label}</Label>
-                <Select value={order[f.field] || "No"} onValueChange={(v) => updateField(f.field, v)}>
+                <Select disabled={readOnly} value={order[f.field] || "No"} onValueChange={(v) => updateField(f.field, v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(f.field === "coated_extrusion_availability" ? COATING_VALUES : AVAILABILITY_VALUES).map((s) => {
@@ -99,6 +103,8 @@ export default function StoreSection({ orderId, order, onRefresh }: StoreSection
           <Label className="text-xs text-muted-foreground">Store Remarks</Label>
           <Textarea
             defaultValue={order.store_remarks || ""}
+            readOnly={readOnly}
+            className={cn(readOnly && "bg-muted")}
             rows={2}
             onBlur={(e) => {
               if (e.target.value !== (order.store_remarks || "")) updateField("store_remarks", e.target.value);

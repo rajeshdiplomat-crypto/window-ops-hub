@@ -19,6 +19,7 @@ import {
   Warehouse,
   RefreshCw,
   User,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -34,7 +35,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Map each nav item to the roles that can see it. Empty = visible to all.
 const navItems = [
-  { label: "Operations Hub", icon: LayoutDashboard, path: "/", group: 0, roles: [] as string[] },
+  { label: "Pulse", icon: Activity, path: "/", group: 0, roles: [] as string[] },
   { label: "Orders", icon: Package, path: "/orders", group: 0, roles: [] },
   { label: "Sales", icon: Package, path: "/sales", group: 1, roles: ["sales"] },
   { label: "Finance", icon: DollarSign, path: "/finance", group: 1, roles: ["finance"] },
@@ -104,9 +105,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
       <aside className="flex w-56 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-          <LayoutDashboard className="h-5 w-5 text-sidebar-primary" />
-          <span className="flex-1 font-semibold text-sm tracking-tight">Window Ops</span>
+        <div className="flex h-20 items-center gap-3 border-b border-sidebar-border/30 px-6 bg-gradient-to-b from-sidebar-background to-transparent">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-primary/40 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-accent border border-white/10 shadow-2xl backdrop-blur-xl">
+              <Activity className="h-5 w-5 text-primary animate-[pulse_3s_infinite]" />
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-black text-xl tracking-tighter text-white uppercase italic leading-none">Pulse</span>
+            <span className="text-[8px] font-bold tracking-[.3em] uppercase text-primary/60 mt-1">Industrial</span>
+          </div>
         </div>
         <nav className="flex-1 overflow-auto p-2 space-y-0.5">
           {visibleItems.map((item, i) => {
@@ -123,30 +132,35 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex h-14 items-center justify-end gap-3 border-b px-4 bg-card shrink-0">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#fafbfc]">
+        <header className="flex h-16 items-center justify-end gap-5 border-b border-slate-200/60 px-8 bg-white/70 backdrop-blur-xl shrink-0 z-20">
           <NotificationBell />
+          <div className="h-6 w-px bg-slate-200 mx-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <Avatar className="h-9 w-9 border-2 border-primary">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 hover:bg-transparent group">
+                <div className="absolute -inset-1 bg-primary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Avatar className="h-10 w-10 border-2 border-white ring-2 ring-primary/10 shadow-sm group-hover:ring-primary/30 transition-all">
+                  <AvatarFallback className="bg-primary text-white text-[10px] font-black tracking-tighter shadow-inner">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <p className="text-sm font-medium">{profileName || "User"}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <DropdownMenuContent align="end" className="w-64 p-2 rounded-[24px] border border-slate-200 shadow-[0_20px_48px_rgba(0,0,0,0.1)] backdrop-blur-3xl bg-white/90">
+              <DropdownMenuLabel className="p-4 pt-4 pb-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight">{profileName || "System Operative"}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate">{user?.email}</p>
+                </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="flex items-center gap-2 cursor-pointer">
-                <LogOut className="h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-slate-100 mx-2" />
+              <div className="p-1">
+                <DropdownMenuItem onClick={signOut} className="flex items-center gap-3 cursor-pointer py-3 px-4 rounded-xl text-red-500 font-bold text-xs uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-colors">
+                  <LogOut className="h-4 w-4" />
+                  Terminate Session
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>

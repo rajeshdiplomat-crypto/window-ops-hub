@@ -6,20 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLog";
 
+import { cn } from "@/lib/utils";
 import StatusDropdown from "./StatusDropdown";
 import OrderActivityLog from "./OrderActivityLog";
 
-export default function DesignSection({ orderId, order, onRefresh, updateOrder }: {
+export default function DesignSection({ orderId, order, onRefresh, updateOrder, readOnly }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
   updateOrder: (field: string, value: any) => void;
+  readOnly?: boolean;
 }) {
   const surveyDone = order.survey_done_windows || 0;
   const released = order.design_released_windows || 0;
   const releasePending = Math.max(0, surveyDone - released);
 
   const updateField = async (field: string, value: any) => {
+    if (readOnly) return;
     const oldVal = order[field];
     if (String(oldVal ?? "") === String(value ?? "")) return;
 
@@ -89,8 +92,10 @@ export default function DesignSection({ orderId, order, onRefresh, updateOrder }
               <Label className="text-xs text-muted-foreground">SO Number</Label>
               <Input
                 defaultValue={order.sales_order_no || ""}
+                readOnly={readOnly}
+                className={readOnly ? "bg-muted" : ""}
                 onBlur={(e) => updateField("sales_order_no", e.target.value || null)}
-                placeholder="Enter SO number..."
+                placeholder={readOnly ? "" : "Enter SO number..."}
               />
             </div>
             <div className="space-y-1">
@@ -100,6 +105,8 @@ export default function DesignSection({ orderId, order, onRefresh, updateOrder }
                 min={0}
                 max={surveyDone}
                 defaultValue={released}
+                readOnly={readOnly}
+                className={readOnly ? "bg-muted" : ""}
                 onBlur={(e) => updateField("design_released_windows", Number(e.target.value) || 0)}
               />
             </div>
@@ -110,10 +117,11 @@ export default function DesignSection({ orderId, order, onRefresh, updateOrder }
             <div className="space-y-1 col-span-2 md:col-span-3">
               <Label className="text-xs text-muted-foreground">Remarks</Label>
               <Textarea
-                className="min-h-[60px]"
+                className={cn("min-h-[60px]", readOnly && "bg-muted")}
                 defaultValue={order.design_remarks || ""}
+                readOnly={readOnly}
                 onBlur={(e) => updateField("design_remarks", e.target.value || null)}
-                placeholder="Design notes..."
+                placeholder={readOnly ? "" : "Design notes..."}
               />
             </div>
           </div>

@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportDataToExcel } from "@/lib/excelUtils";
 
 export default function InstallationPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -45,20 +46,40 @@ export default function InstallationPage() {
   const partialOrders = orders.filter((o) => getInstalled(o.id) > 0 && getInstalled(o.id) < (o.design_released_windows || 0));
   const fullyOrders = orders.filter((o) => getInstalled(o.id) > 0 && getInstalled(o.id) >= (o.design_released_windows || 0) && (o.design_released_windows || 0) > 0);
 
+  const handleExport = (activeTab: string) => {
+    let list = orders;
+    if (activeTab === "ready") list = readyOrders;
+    else if (activeTab === "partial") list = partialOrders;
+    else if (activeTab === "full") list = fullyOrders;
+
+    const headers = ["Order", "Owner", "Quote No", "SO No", "Salesperson", "Status", "Product", "Sqft", "Value", "Dispatched", "Installed", "Pending"];
+    const data = list.map(o => ({
+      "Order": o.order_name,
+      "Owner": o.dealer_name,
+      "Quote No": o.quote_no || "",
+      "SO No": o.sales_order_no || "",
+      "Salesperson": o.salesperson || "",
+      "Status": o.installation_status || "Pending",
+      "Product": o.product_type || "",
+      "Sqft": o.sqft || 0,
+      "Value": o.order_value || 0,
+      "Dispatched": getDispatched(o.id),
+      "Installed": getInstalled(o.id),
+      "Pending": getPending(o.id)
+    }));
+    exportDataToExcel(data, headers, `installation_export_${activeTab}.xlsx`);
+  };
+
   const renderTable = (list: any[]) => (
     <div className="rounded-md border bg-card">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order Type</TableHead>
-            <TableHead>Order Name</TableHead>
-            <TableHead>Owner</TableHead>
-            <TableHead>Quote No</TableHead>
-            <TableHead>SO No</TableHead>
-            <TableHead>Product Type</TableHead>
-            <TableHead className="text-right">Windows</TableHead>
+            <TableHead>Order</TableHead>
+            <TableHead>Salesperson</TableHead>
+            <TableHead>Install Status</TableHead>
             <TableHead className="text-right">Sqft</TableHead>
-            <TableHead className="text-right">Value</TableHead>
+            <TableHead className="text-right">Dispatched</TableHead>
             <TableHead className="text-right">Installed</TableHead>
             <TableHead className="text-right">Pending</TableHead>
           </TableRow>
@@ -70,19 +91,21 @@ export default function InstallationPage() {
             <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No orders</TableCell></TableRow>
           ) : list.map((o) => (
             <TableRow key={o.id}>
-              <TableCell className="text-sm">{o.order_type}</TableCell>
               <TableCell>
                 <Link to={`/orders/${o.id}`} className="font-medium text-primary hover:underline">{o.order_name}</Link>
+                <div className="text-[10px] text-muted-foreground uppercase">{o.dealer_name}</div>
+                <div className="text-[10px] text-muted-foreground">Q: {o.quote_no || "—"} | S: {o.sales_order_no || "—"}</div>
               </TableCell>
-              <TableCell className="text-sm">{o.dealer_name}</TableCell>
-              <TableCell className="text-sm">{o.quote_no || "—"}</TableCell>
-              <TableCell className="text-sm">{o.sales_order_no || "—"}</TableCell>
-              <TableCell className="text-sm">{o.product_type}</TableCell>
-              <TableCell className="text-right">{o.total_windows}</TableCell>
-              <TableCell className="text-right">{Number(o.sqft).toFixed(1)}</TableCell>
-              <TableCell className="text-right font-medium">₹{Number(o.order_value).toLocaleString()}</TableCell>
-              <TableCell className="text-right font-medium">{getInstalled(o.id)}</TableCell>
-              <TableCell className="text-right">{getPending(o.id)}</TableCell>
+              <TableCell className="text-sm">{o.salesperson || "—"}</TableCell>
+              <TableCell>
+                <Badge variant={o.installation_status === "Completed" ? "success" : "warning"} className="text-[10px]">
+                  {o.installation_status || "Pending"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right text-sm">{Number(o.sqft).toFixed(1)}</TableCell>
+              <TableCell className="text-right font-medium text-blue-600">{getDispatched(o.id)}</TableCell>
+              <TableCell className="text-right font-bold text-green-600">{getInstalled(o.id)}</TableCell>
+              <TableCell className="text-right font-bold text-destructive">{getPending(o.id)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -92,9 +115,16 @@ export default function InstallationPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Installation</h1>
-        <p className="text-sm text-muted-foreground">Track site installation progress</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Installation</h1>
+          <p className="text-sm text-muted-foreground">Track site installation progress</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => handleExport("all")}>
+            <Download className="mr-2 h-4 w-4" /> Export All
+          </Button>
+        </div>
       </div>
       <Tabs defaultValue="ready">
         <TabsList>

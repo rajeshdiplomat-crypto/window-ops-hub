@@ -71,12 +71,16 @@ export default function DispatchPage() {
 
   const handleExport = (activeTab: string) => {
     const list = getFiltered(activeTab);
-    const headers = ["Order", "Owner", "Quote No", "SO No", "Windows", "Fin Appr", "Ready", "Dispatched", "Balance"];
+    const headers = ["Order", "Owner", "Quote No", "SO No", "Salesperson", "Product Type", "Shade", "Sqft", "Windows", "Fin Appr", "Ready", "Dispatched", "Balance"];
     const data = list.map(o => ({
       "Order": o.order_name,
       "Owner": o.dealer_name,
       "Quote No": o.quote_no || "",
       "SO No": o.sales_order_no || "",
+      "Salesperson": o.salesperson || "",
+      "Product Type": o.product_type || "",
+      "Shade": o.colour_shade || "",
+      "Sqft": o.sqft || 0,
       "Windows": o.total_windows,
       "Fin Appr": o.approval_for_dispatch,
       "Ready": o.PackedTotal,
@@ -105,12 +109,13 @@ export default function DispatchPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Order</TableHead>
-            <TableHead>Quote No</TableHead>
-            <TableHead>SO No</TableHead>
+            <TableHead>Salesperson</TableHead>
+            <TableHead>Product / Shade</TableHead>
+            <TableHead className="text-right">Sqft</TableHead>
             <TableHead className="text-right">Windows</TableHead>
-            <TableHead className="text-center">Finance Approval</TableHead>
+            <TableHead className="text-center">Fin Appr</TableHead>
             <TableHead className="text-right">Ready</TableHead>
-            <TableHead className="text-right">Dispatched</TableHead>
+            <TableHead className="text-right">Dispatch</TableHead>
             <TableHead className="text-right">Balance</TableHead>
           </TableRow>
         </TableHeader>
@@ -124,19 +129,24 @@ export default function DispatchPage() {
               <TableRow key={o.id}>
                 <TableCell>
                   <Link to={`/orders/${o.id}`} className="font-medium text-primary hover:underline">{o.order_name}</Link>
-                  <div className="text-xs text-muted-foreground">{o.dealer_name}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase">{o.dealer_name}</div>
+                  <div className="text-[10px] text-muted-foreground">Q: {o.quote_no || "—"} | S: {o.sales_order_no || "—"}</div>
                 </TableCell>
-                <TableCell className="text-sm">{o.quote_no || "—"}</TableCell>
-                <TableCell className="text-sm">{o.sales_order_no || "—"}</TableCell>
-                <TableCell className="text-right">{o.total_windows}</TableCell>
+                <TableCell className="text-sm">{o.salesperson || "—"}</TableCell>
+                <TableCell className="text-sm">
+                  <div className="truncate max-w-[120px]" title={o.product_type}>{o.product_type}</div>
+                  <div className="text-xs text-muted-foreground">{o.colour_shade || "—"}</div>
+                </TableCell>
+                <TableCell className="text-right text-sm">{o.sqft?.toFixed(1) || "0.0"}</TableCell>
+                <TableCell className="text-right font-medium">{o.total_windows}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={o.approval_for_dispatch === "Approved" ? "default" : "secondary"}>
+                  <Badge variant={o.approval_for_dispatch === "Approved" ? "success" : "secondary"} className="text-[10px]">
                     {o.approval_for_dispatch}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-medium">{o.PackedTotal}</TableCell>
-                <TableCell className="text-right">{o.dispatched}</TableCell>
-                <TableCell className="text-right">{o.balance}</TableCell>
+                <TableCell className="text-right font-bold text-blue-600">{o.PackedTotal}</TableCell>
+                <TableCell className="text-right font-bold text-green-600">{o.dispatched}</TableCell>
+                <TableCell className="text-right font-bold text-destructive">{o.balance}</TableCell>
               </TableRow>
             ))
           )}

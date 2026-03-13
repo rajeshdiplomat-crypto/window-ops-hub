@@ -20,9 +20,10 @@ interface Props {
   order: any;
   onRefresh: () => void;
   updateOrder: (field: string, value: any) => void;
+  readOnly?: boolean;
 }
 
-export default function DispatchSection({ orderId, order, onRefresh, updateOrder }: Props) {
+export default function DispatchSection({ orderId, order, onRefresh, updateOrder, readOnly }: Props) {
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,8 +123,8 @@ export default function DispatchSection({ orderId, order, onRefresh, updateOrder
 
           <div className="mt-4">
             {!adding ? (
-              <Button size="sm" onClick={() => setAdding(true)} disabled={balanceToDispatch <= 0}>
-                Add Dispatch Entry
+              <Button size="sm" onClick={() => setAdding(true)} disabled={readOnly || balanceToDispatch <= 0}>
+                {readOnly ? "View Only" : "Add Dispatch Entry"}
               </Button>
             ) : (
               <div className="rounded-md border p-4 bg-muted/30 space-y-3">

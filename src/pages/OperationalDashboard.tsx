@@ -17,8 +17,10 @@ import {
     Settings,
     ArrowUpRight,
     Clock,
-    LayoutDashboard
+    LayoutDashboard,
+    Activity
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, subMonths, isWithinInterval, parseISO } from "date-fns";
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend
@@ -73,6 +75,20 @@ interface KPIStats {
     paymentsReceived: number;
     outstandingBalance: number;
 
+    // Store
+    ordersAwaitingStore: number;
+    ordersReadyForProduction: number;
+    ordersBlockedInStore: number;
+    storeProcessedOrders: number;
+    storeActivity: number;
+
+    // Procurement
+    ordersRequiringProcurement: number;
+    procurementInitiated: number;
+    ordersAwaitingSupplier: number;
+    procurementCompleted: number;
+    procurementActivity: number;
+
     // Rework
     totalReworkCases: number;
     windowsUnderRework: number;
@@ -87,6 +103,7 @@ export default function OperationalDashboard() {
     const [horizon, setHorizon] = useState<TimeHorizon>("weekly");
     const [stats, setStats] = useState<KPIStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -95,153 +112,228 @@ export default function OperationalDashboard() {
 
     const fetchData = async () => {
         setLoading(true);
-        const now = new Date();
-        let start: Date | null = null;
-        let end: Date | null = endOfDay(now);
+        setError(null);
+        try {
+            const now = new Date();
+            let start: Date | null = null;
+            const end: Date | null = endOfDay(now);
 
-        if (horizon === "daily") {
-            start = startOfDay(now);
-        } else if (horizon === "weekly") {
-            start = startOfWeek(now, { weekStartsOn: 1 });
-        } else if (horizon === "monthly") {
-            start = startOfMonth(now);
-        }
+            if (horizon === "daily") {
+                start = startOfDay(now);
+            } else if (horizon === "weekly") {
+                start = startOfWeek(now, { weekStartsOn: 1 });
+            } else if (horizon === "monthly") {
+                start = startOfMonth(now);
+            }
 
-        const [
-            ordersRes,
-            prodLogsRes,
-            dispLogsRes,
-            payLogsRes,
-            rewLogsRes,
-            actLogsRes
-        ] = await Promise.all([
-            supabase.from("orders").select("*"),
-            supabase.from("production_logs").select("*"),
-            supabase.from("dispatch_logs").select("*"),
-            supabase.from("payment_logs").select("*"),
-            supabase.from("rework_logs").select("*"),
-            supabase.from("order_activity_log" as any).select("*")
-        ]);
+            const [
+                ordersRes,
+                prodLogsRes,
+                dispLogsRes,
+                payLogsRes,
+                rewLogsRes,
+                actLogsRes
+            ] = await Promise.all([
+                supabase.from("orders").select("*"),
+                supabase.from("production_logs").select("*"),
+                supabase.from("dispatch_logs").select("*"),
+                supabase.from("payment_logs").select("*"),
+                supabase.from("rework_logs").select("*"),
+                supabase.from("order_activity_log" as any).select("*")
+            ]);
 
-        const orders = ordersRes.data || [];
-        const prodLogs = prodLogsRes.data || [];
-        const dispLogs = dispLogsRes.data || [];
-        const payLogs = payLogsRes.data || [];
-        const rewLogs = rewLogsRes.data || [];
-        const actLogs = actLogsRes.data || [];
+            const orders = ordersRes.data || [];
+            const prodLogs = prodLogsRes.data || [];
+            const dispLogs = dispLogsRes.data || [];
+            const payLogs = payLogsRes.data || [];
+            const rewLogs = rewLogsRes.data || [];
+            const actLogs = actLogsRes.data || [];
 
-        const filterByHorizon = (logs: any[], dateField = "timestamp") => {
-            if (horizon === "all" || !start) return logs;
-            return logs.filter(l => {
-                const d = parseISO(l[dateField] || l.created_at);
-                return isWithinInterval(d, { start, end });
+            const filterByHorizon = (logs: any[], dateField = "created_at") => {
+                if (horizon === "all" || !start) return logs;
+                return logs.filter(l => {
+                    try {
+                        const rawDate = l[dateField] || l.created_at;
+                        if (!rawDate) return false;
+                        const d = parseISO(rawDate);
+                        return isWithinInterval(d, { start, end });
+                    } catch {
+                        return false;
+                    }
+                });
+            };
+
+            const horizProd = filterByHorizon(prodLogs, "entry_date");
+            const horizDisp = filterByHorizon(dispLogs, "created_at");
+            const horizPay = filterByHorizon(payLogs, "created_at");
+            const horizRew = filterByHorizon(rewLogs, "created_at");
+            const horizAct = filterByHorizon(actLogs, "timestamp");
+
+            // Pipeline Summaries (Static snapshot)
+            const packedMap: Record<string, number> = {};
+            prodLogs.forEach(l => { if (l.stage === "Packed") packedMap[l.order_id] = (packedMap[l.order_id] || 0) + (l.windows_completed || 0); });
+
+            const dispMap: Record<string, number> = {};
+            dispLogs.forEach(l => { dispMap[l.order_id] = (dispMap[l.order_id] || 0) + (l.windows_dispatched || 0); });
+
+            const totalOrders = orders.length;
+            const completedOrders = orders.filter(o => {
+                const disp = dispMap[o.id] || 0;
+                return disp >= o.total_windows && o.total_windows > 0;
+            }).length;
+
+            // Store & Procurement Helpers
+            const isStoreAvailable = (o: any) =>
+                (o.hardware_availability === "In Stock / Available" || o.hardware_availability === "Not Required") &&
+                (o.extrusion_availability === "In Stock / Available" || o.extrusion_availability === "Not Required") &&
+                (o.glass_availability === "In Stock / Available" || o.glass_availability === "Not Required") &&
+                (o.coated_extrusion_availability === "In Stock / Available" || o.coated_extrusion_availability === "Not Required");
+
+            const isStoreAwaiting = (o: any) =>
+                o.hardware_availability === "Pending PO" &&
+                o.extrusion_availability === "Pending PO" &&
+                o.glass_availability === "Pending PO" &&
+                o.coated_extrusion_availability === "Pending PO";
+
+            const isPoPending = (o: any) => {
+                const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
+                return statuses.some((s) => s === "Pending PO" || s === "Pending Coating" || s === "Partially Available");
+            };
+
+            const isDeliveryPending = (o: any) => {
+                const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
+                return statuses.some((s) => s === "PO Placed" || s === "Sent to Coating");
+            };
+
+            const isProcCompleted = (o: any) => {
+                const statuses = [o.hardware_po_status, o.extrusion_po_status, o.glass_po_status, o.coating_status];
+                return statuses.every((s) => s === "Delivered" || s === "In Stock / Available" || s === "Not Required") &&
+                    statuses.some((s) => s === "Delivered" || s === "In Stock / Available");
+            };
+
+            const relOrders = orders.filter(o => (o.design_released_windows || 0) > 0);
+
+            // Rework aggregation
+            const reworkByCost: Record<string, number> = {};
+            rewLogs.forEach(r => {
+                const cat = r.issue_type || "Uncategorized";
+                reworkByCost[cat] = (reworkByCost[cat] || 0) + 1;
             });
-        };
 
-        const horizProd = filterByHorizon(prodLogs, "timestamp");
-        const horizDisp = filterByHorizon(dispLogs, "timestamp");
-        const horizPay = filterByHorizon(payLogs, "created_at");
-        const horizRew = filterByHorizon(rewLogs, "created_at");
-        const horizAct = filterByHorizon(actLogs, "timestamp");
+            const newStats: KPIStats = {
+                totalProjects: new Set(orders.map(o => o.order_name.split("-")[0].trim())).size,
+                totalOrders,
+                totalRetailOrders: orders.filter(o => o.order_type === "Retail").length,
+                totalWindowOrders: orders.reduce((s, o) => s + (o.total_windows || 0), 0),
+                totalOrderValue: orders.reduce((s, o) => s + Number(o.order_value || 0), 0),
+                totalSoldValue: orders.filter(o => o.commercial_status === "Approved").reduce((s, o) => s + Number(o.order_value || 0), 0),
+                activeOrders: totalOrders - completedOrders,
+                completedOrders,
 
-        // Pipeline Summaries (Static snapshot)
-        const packedMap: Record<string, number> = {};
-        prodLogs.forEach(l => { if (l.stage === "Packed") packedMap[l.order_id] = (packedMap[l.order_id] || 0) + (l.windows_completed || 0); });
+                windowsPendingSurvey: orders.reduce((s, o) => s + (o.total_windows - (o.survey_done_windows || 0)), 0),
+                windowsSurveyed: orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0),
+                surveyCompletionRate: orders.length ? Math.round((orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0) / orders.reduce((s, o) => s + (o.total_windows || 0), 0)) * 100) : 0,
+                ordersAwaitingSurvey: orders.filter(o => (o.survey_done_windows || 0) === 0).length,
+                surveyActivity: horizAct.filter(l => l.module === "Survey" && l.field_name === "survey_done_windows").length,
 
-        const dispMap: Record<string, number> = {};
-        dispLogs.forEach(l => { dispMap[l.order_id] = (dispMap[l.order_id] || 0) + (l.windows_dispatched || 0); });
+                windowsPendingDesign: orders.reduce((s, o) => s + (o.survey_done_windows - (o.design_released_windows || 0)), 0),
+                windowsReleased: orders.reduce((s, o) => s + (o.design_released_windows || 0), 0),
+                designCompletionRate: orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0) ? Math.round((orders.reduce((s, o) => s + (o.design_released_windows || 0), 0) / orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0)) * 100) : 0,
+                ordersAwaitingDesign: orders.filter(o => o.survey_done_windows > 0 && (o.design_released_windows || 0) === 0).length,
+                designActivity: horizAct.filter(l => l.module === "Design" && l.field_name === "design_released_windows").length,
 
-        const totalOrders = orders.length;
-        const completedOrders = orders.filter(o => {
-            const disp = dispMap[o.id] || 0;
-            return disp >= o.total_windows && o.total_windows > 0;
-        }).length;
+                cuttingCompleted: horizProd.filter(l => l.stage === "Cutting").reduce((s, l) => s + (l.windows_completed || 0), 0),
+                assemblyCompleted: horizProd.filter(l => l.stage === "Assembly").reduce((s, l) => s + (l.windows_completed || 0), 0),
+                glazingCompleted: horizProd.filter(l => l.stage === "Glazing").reduce((s, l) => s + (l.windows_completed || 0), 0),
+                qualityPassed: horizProd.filter(l => l.stage === "Quality").reduce((s, l) => s + (l.windows_completed || 0), 0),
+                windowsPacked: horizProd.filter(l => l.stage === "Packed").reduce((s, l) => s + (l.windows_completed || 0), 0),
+                productionBacklog: orders.filter(o => o.approval_for_production === "Approved").reduce((s, o) => s + (o.design_released_windows - (packedMap[o.id] || 0)), 0),
+                productionActivity: horizProd.reduce((s, l) => s + (l.windows_completed || 0), 0),
 
-        // Rework aggregation
-        const reworkByCost: Record<string, number> = {};
-        rewLogs.forEach(r => {
-            const cat = r.category || "Uncategorized";
-            reworkByCost[cat] = (reworkByCost[cat] || 0) + 1;
-        });
+                windowsReadyForDispatch: orders.reduce((s, o) => s + ((packedMap[o.id] || 0) - (dispMap[o.id] || 0)), 0),
+                windowsDispatched: orders.reduce((s, o) => s + (dispMap[o.id] || 0), 0),
+                dispatchCompletionRate: orders.reduce((s, o) => s + (packedMap[o.id] || 0), 0) ? Math.round((orders.reduce((s, o) => s + (dispMap[o.id] || 0), 0) / orders.reduce((s, o) => s + (packedMap[o.id] || 0), 0)) * 100) : 0,
+                ordersReadyForDispatch: orders.filter(o => (packedMap[o.id] || 0) > 0 && (dispMap[o.id] || 0) < (packedMap[o.id] || 0)).length,
+                dispatchActivity: horizDisp.reduce((s, l) => s + (l.windows_dispatched || 0), 0),
 
-        const newStats: KPIStats = {
-            totalProjects: new Set(orders.map(o => o.order_name.split("-")[0].trim())).size,
-            totalOrders,
-            totalRetailOrders: orders.filter(o => o.order_type === "Retail").length,
-            totalWindowOrders: orders.reduce((s, o) => s + (o.total_windows || 0), 0),
-            totalOrderValue: orders.reduce((s, o) => s + Number(o.order_value || 0), 0),
-            totalSoldValue: orders.filter(o => o.commercial_status === "Approved").reduce((s, o) => s + Number(o.order_value || 0), 0),
-            activeOrders: totalOrders - completedOrders,
-            completedOrders,
+                pendingProductionApprovals: orders.filter(o => o.approval_for_production !== "Approved" && o.design_released_windows > 0).length,
+                pendingDispatchApprovals: orders.filter(o => o.approval_for_dispatch !== "Approved" && (packedMap[o.id] || 0) > 0).length,
+                paymentsReceived: horizPay.filter(l => l.status === "Confirmed").reduce((s, l) => s + Number(l.amount || 0), 0),
+                outstandingBalance: orders.reduce((s, o) => s + Number(o.balance_amount || 0), 0),
 
-            windowsPendingSurvey: orders.reduce((s, o) => s + (o.total_windows - (o.survey_done_windows || 0)), 0),
-            windowsSurveyed: orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0),
-            surveyCompletionRate: orders.length ? Math.round((orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0) / orders.reduce((s, o) => s + (o.total_windows || 0), 0)) * 100) : 0,
-            ordersAwaitingSurvey: orders.filter(o => (o.survey_done_windows || 0) === 0).length,
-            surveyActivity: horizAct.filter(l => l.module === "Survey" && l.field_name === "survey_done_windows").length,
+                // Store
+                ordersAwaitingStore: relOrders.filter(o => isStoreAwaiting(o)).length,
+                ordersReadyForProduction: relOrders.filter(o => isStoreAvailable(o)).length,
+                ordersBlockedInStore: relOrders.filter(o => !isStoreAvailable(o) && !isStoreAwaiting(o)).length,
+                storeProcessedOrders: relOrders.filter(o => isStoreAvailable(o)).length,
+                storeActivity: horizAct.filter(l => l.module?.includes("Store")).length,
 
-            windowsPendingDesign: orders.reduce((s, o) => s + (o.survey_done_windows - (o.design_released_windows || 0)), 0),
-            windowsReleased: orders.reduce((s, o) => s + (o.design_released_windows || 0), 0),
-            designCompletionRate: orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0) ? Math.round((orders.reduce((s, o) => s + (o.design_released_windows || 0), 0) / orders.reduce((s, o) => s + (o.survey_done_windows || 0), 0)) * 100) : 0,
-            ordersAwaitingDesign: orders.filter(o => o.survey_done_windows > 0 && (o.design_released_windows || 0) === 0).length,
-            designActivity: horizAct.filter(l => l.module === "Design" && l.field_name === "design_released_windows").length,
+                // Procurement
+                ordersRequiringProcurement: relOrders.filter(o => isPoPending(o)).length,
+                procurementInitiated: relOrders.filter(o => isDeliveryPending(o)).length,
+                ordersAwaitingSupplier: relOrders.filter(o => isDeliveryPending(o)).length,
+                procurementCompleted: relOrders.filter(o => isProcCompleted(o)).length,
+                procurementActivity: horizAct.filter(l => l.module?.includes("Procurement")).length,
 
-            cuttingCompleted: horizProd.filter(l => l.stage === "Cutting").reduce((s, l) => s + (l.windows_completed || 0), 0),
-            assemblyCompleted: horizProd.filter(l => l.stage === "Assembly").reduce((s, l) => s + (l.windows_completed || 0), 0),
-            glazingCompleted: horizProd.filter(l => l.stage === "Glazing").reduce((s, l) => s + (l.windows_completed || 0), 0),
-            qualityPassed: horizProd.filter(l => l.stage === "Quality").reduce((s, l) => s + (l.windows_completed || 0), 0),
-            windowsPacked: horizProd.filter(l => l.stage === "Packed").reduce((s, l) => s + (l.windows_completed || 0), 0),
-            productionBacklog: orders.filter(o => o.approval_for_production === "Approved").reduce((s, o) => s + (o.design_released_windows - (packedMap[o.id] || 0)), 0),
-            productionActivity: horizProd.reduce((s, l) => s + (l.windows_completed || 0), 0),
+                totalReworkCases: rewLogs.length,
+                windowsUnderRework: rewLogs.filter(r => r.status !== "Solved").reduce((s, r) => s + (r.rework_qty || 0), 0),
+                reworkCompleted: horizRew.filter(r => r.status === "Solved").reduce((s, r) => s + (r.rework_qty || 0), 0),
+                reworkPending: rewLogs.filter(r => r.status !== "Solved").length,
+                reworkByCost
+            };
 
-            windowsReadyForDispatch: orders.reduce((s, o) => s + ((packedMap[o.id] || 0) - (dispMap[o.id] || 0)), 0),
-            windowsDispatched: orders.reduce((s, o) => s + (dispMap[o.id] || 0), 0),
-            dispatchCompletionRate: orders.reduce((s, o) => s + (packedMap[o.id] || 0), 0) ? Math.round((orders.reduce((s, o) => s + (dispMap[o.id] || 0), 0) / orders.reduce((s, o) => s + (packedMap[o.id] || 0), 0)) * 100) : 0,
-            ordersReadyForDispatch: orders.filter(o => (packedMap[o.id] || 0) > 0 && (dispMap[o.id] || 0) < (packedMap[o.id] || 0)).length,
-            dispatchActivity: horizDisp.reduce((s, l) => s + (l.windows_dispatched || 0), 0),
-
-            pendingProductionApprovals: orders.filter(o => o.approval_for_production !== "Approved" && o.design_released_windows > 0).length,
-            pendingDispatchApprovals: orders.filter(o => o.approval_for_dispatch !== "Approved" && (packedMap[o.id] || 0) > 0).length,
-            paymentsReceived: horizPay.filter(l => l.status === "Confirmed").reduce((s, l) => s + Number(l.amount || 0), 0),
-            outstandingBalance: orders.reduce((s, o) => s + Number(o.balance_amount || 0), 0),
-
-            totalReworkCases: rewLogs.length,
-            windowsUnderRework: rewLogs.filter(r => r.status !== "Solved").reduce((s, r) => s + (r.rework_qty || 0), 0),
-            reworkCompleted: horizRew.filter(r => r.status === "Solved").reduce((s, r) => s + (r.rework_qty || 0), 0),
-            reworkPending: rewLogs.filter(r => r.status !== "Solved").length,
-            reworkByCost
-        };
-
-        setStats(newStats);
-        setLoading(false);
+            setStats(newStats);
+        } catch (err: any) {
+            console.error("OperationalDashboard fetchData error:", err);
+            setError(err?.message || "Failed to load dashboard data");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    if (loading || !stats) {
+    if (loading) {
         return (
             <div className="flex flex-col h-[80vh] items-center justify-center gap-4">
-                <Clock className="h-10 w-10 text-primary animate-spin-slow" />
+                <Clock className="h-10 w-10 text-primary animate-spin" />
                 <p className="text-muted-foreground animate-pulse font-medium">Aggregating Operational Excellence...</p>
             </div>
         );
     }
 
-    const KPICard = ({ title, value, subValue, icon: Icon, color, onClick, variant = "default" }: any) => (
-        <Card className="overflow-hidden hover:shadow-md transition-all cursor-pointer group border-l-4" style={{ borderLeftColor: color }} onClick={onClick}>
-            <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                    <div className="rounded-lg p-2 bg-muted group-hover:bg-primary/10 transition-colors">
-                        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+    if (error || !stats) {
+        return (
+            <div className="flex flex-col h-[80vh] items-center justify-center gap-4">
+                <AlertTriangle className="h-10 w-10 text-amber-500" />
+                <p className="text-muted-foreground font-medium">{error || "No data available"}</p>
+                <button onClick={fetchData} className="text-primary underline text-sm">Retry</button>
+            </div>
+        );
+    }
+
+    const KPICard = ({ title, value, subValue, icon: Icon, color, onClick }: any) => (
+        <Card
+            className="relative overflow-hidden group cursor-pointer border-none bg-white/40 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.04)] ring-1 ring-white/20 transition-all duration-500 hover:shadow-[0_24px_64px_rgba(0,0,0,0.08)] hover:-translate-y-1"
+            onClick={onClick}
+        >
+            <div className="absolute top-0 left-0 w-1 h-full opacity-60" style={{ backgroundColor: color }} />
+            <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                    <div className="rounded-2xl p-3 bg-white shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-500">
+                        <Icon className="h-6 w-6" style={{ color }} />
                     </div>
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-all opacity-0 group-hover:opacity-100" />
+                    <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
+                        <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+                    </div>
                 </div>
-                <div>
-                    <p className="text-2xl font-bold tracking-tight">{value}</p>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">{title}</p>
+                <div className="space-y-1">
+                    <p className="text-3xl font-black tracking-tight text-slate-900 leading-none">{value}</p>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] pt-1">{title}</p>
                     {subValue !== undefined && (
-                        <p className="text-xs text-muted-foreground mt-2 font-semibold flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-                            {subValue}
-                        </p>
+                        <div className="pt-4 flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-600 bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50">
+                                {subValue}
+                            </span>
+                        </div>
                     )}
                 </div>
             </CardContent>
@@ -249,28 +341,38 @@ export default function OperationalDashboard() {
     );
 
     const SectionHeader = ({ title, icon: Icon }: any) => (
-        <div className="flex items-center gap-2 mb-4 mt-8 first:mt-0">
-            <div className="h-8 w-1 bg-primary rounded-full" />
-            <Icon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        <div className="flex items-center gap-4 mb-6 mt-12 first:mt-0">
+            <div className="h-10 w-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center">
+                <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase italic">{title}</h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent ml-2" />
         </div>
     );
 
     return (
-        <div className="p-8 space-y-8 bg-slate-50/50 min-h-screen pb-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Operations Hub</h1>
-                    <p className="text-slate-500 font-medium">Full visibility across the Window Ops ecosystem</p>
+        <div className="p-8 lg:p-12 space-y-12 bg-[#fafbfc] min-h-screen pb-32">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="flex items-center gap-5">
+                    <div className="h-16 w-16 rounded-[22px] bg-primary flex items-center justify-center shadow-[0_12px_24px_rgba(var(--primary),0.2)]">
+                        <Activity className="h-8 w-8 text-white animate-pulse" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black tracking-tight text-slate-900 uppercase italic leading-none">Command Central</h1>
+                        <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-2">Real-time Industrial Pulse</p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white p-1 rounded-xl border shadow-sm">
+                <div className="flex items-center gap-1.5 bg-slate-200/50 backdrop-blur-md p-1.5 rounded-2xl border border-white">
                     {(["daily", "weekly", "monthly", "all"] as TimeHorizon[]).map((t) => (
                         <Button
                             key={t}
                             variant={horizon === t ? "default" : "ghost"}
                             size="sm"
-                            className="capitalize h-8 px-4 text-xs font-bold"
+                            className={cn(
+                                "capitalize h-10 px-6 text-xs font-black tracking-widest transition-all rounded-xl",
+                                horizon === t ? "bg-white text-primary shadow-sm hover:bg-white" : "text-slate-500 hover:bg-white/50"
+                            )}
                             onClick={() => setHorizon(t)}
                         >
                             {t}
@@ -351,6 +453,26 @@ export default function OperationalDashboard() {
                                         </div>
                                     </CardContent>
                                 </Card>
+                            </div>
+                        </section>
+
+                        <section>
+                            <SectionHeader title="Store & Inventory" icon={Package} />
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <KPICard title="Awaiting Proc." value={stats.ordersAwaitingStore} icon={Clock} color="#f59e0b" onClick={() => navigate("/store")} />
+                                <KPICard title="Blocked" value={stats.ordersBlockedInStore} icon={AlertTriangle} color="#ef4444" onClick={() => navigate("/store")} />
+                                <KPICard title="Ready for Prod" value={stats.ordersReadyForProduction} icon={ClipboardCheck} color="#10b981" onClick={() => navigate("/store")} />
+                                <KPICard title="Operational" value={stats.storeActivity} subValue={`Actions (${horizon})`} icon={TrendingUp} color="#3b82f6" onClick={() => navigate("/store")} />
+                            </div>
+                        </section>
+
+                        <section>
+                            <SectionHeader title="Procurement & Supply Chain" icon={Truck} />
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <KPICard title="Req. Action" value={stats.ordersRequiringProcurement} icon={Settings} color="#8b5cf6" onClick={() => navigate("/procurement")} />
+                                <KPICard title="Supplier Pend." value={stats.ordersAwaitingSupplier} icon={Clock} color="#f59e0b" onClick={() => navigate("/procurement")} />
+                                <KPICard title="Completed" value={stats.procurementCompleted} icon={ClipboardCheck} color="#10b981" onClick={() => navigate("/procurement")} />
+                                <KPICard title="Activity" value={stats.procurementActivity} subValue={`Updates (${horizon})`} icon={TrendingUp} color="#3b82f6" onClick={() => navigate("/procurement")} />
                             </div>
                         </section>
 

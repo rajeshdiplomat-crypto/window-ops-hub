@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -37,11 +38,12 @@ const APPROVAL_OPTIONS = ["Pending", "Approved", "Hold"];
 import StatusDropdown from "./StatusDropdown";
 import OrderActivityLog from "./OrderActivityLog";
 
-export default function FinanceSection({ orderId, order, onRefresh, updateOrder }: {
+export default function FinanceSection({ orderId, order, onRefresh, updateOrder, readOnly }: {
   orderId: string;
   order: any;
   onRefresh: () => void;
   updateOrder: (field: string, value: any) => void;
+  readOnly?: boolean;
 }) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -208,6 +210,7 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
   const updateApproval = async (field: string, value: string) => {
     const oldVal = order[field];
     if (oldVal === value) return;
+    if (readOnly) return;
     await supabase.from("orders").update({ [field]: value }).eq("id", orderId);
     await logActivity({
       orderId,
@@ -223,6 +226,7 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
   const updateRemarks = async (value: string) => {
     const oldVal = order.finance_remarks;
     if (oldVal === value) return;
+    if (readOnly) return;
     await supabase.from("orders").update({ finance_remarks: value } as any).eq("id", orderId);
     await logActivity({
       orderId,
@@ -272,7 +276,7 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Approval for Production</Label>
-              <Select value={order.approval_for_production || "Pending"} onValueChange={(v) => updateApproval("approval_for_production", v)}>
+              <Select disabled={readOnly} value={order.approval_for_production || "Pending"} onValueChange={(v) => updateApproval("approval_for_production", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {APPROVAL_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -281,7 +285,7 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Approval for Dispatch</Label>
-              <Select value={order.approval_for_dispatch || "Pending"} onValueChange={(v) => updateApproval("approval_for_dispatch", v)}>
+              <Select disabled={readOnly} value={order.approval_for_dispatch || "Pending"} onValueChange={(v) => updateApproval("approval_for_dispatch", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {APPROVAL_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -291,10 +295,11 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
             <div className="space-y-1 col-span-2 md:col-span-1">
               <Label className="text-xs text-muted-foreground">Remarks</Label>
               <Textarea
-                className="min-h-[60px]"
+                className={cn("min-h-[60px]", readOnly && "bg-muted")}
                 defaultValue={order.finance_remarks || ""}
+                readOnly={readOnly}
                 onBlur={(e) => updateRemarks(e.target.value)}
-                placeholder="Finance notes..."
+                placeholder={readOnly ? "" : "Finance notes..."}
               />
             </div>
           </div>
@@ -305,9 +310,11 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Payment History</CardTitle>
-          <Button size="sm" className="gap-1.5" onClick={() => { resetForm(); setAddOpen(true); }}>
-            <Plus className="h-4 w-4" /> Add Payment
-          </Button>
+          {!readOnly && (
+            <Button size="sm" className="gap-1.5" onClick={() => { resetForm(); setAddOpen(true); }}>
+              <Plus className="h-4 w-4" /> Add Payment
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
@@ -349,19 +356,24 @@ export default function FinanceSection({ orderId, order, onRefresh, updateOrder 
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(p)} title="Edit">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        {p.status === "Draft" && (
+                        {!readOnly && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => confirmPayment(p)} title="Confirm">
-                              <Check className="h-3.5 w-3.5" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(p)} title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDraftPayment(p)} title="Delete">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            {p.status === "Draft" && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => confirmPayment(p)} title="Confirm">
+                                  <Check className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteDraftPayment(p)} title="Delete">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
                           </>
                         )}
+                        {readOnly && <span className="text-xs text-muted-foreground italic">View Only</span>}
                       </div>
                     </TableCell>
                   </TableRow>

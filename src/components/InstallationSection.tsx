@@ -19,9 +19,10 @@ interface Props {
   order: any;
   onRefresh: () => void;
   updateOrder: (field: string, value: any) => void;
+  readOnly?: boolean;
 }
 
-export default function InstallationSection({ orderId, order, onRefresh, updateOrder }: Props) {
+export default function InstallationSection({ orderId, order, onRefresh, updateOrder, readOnly }: Props) {
   const [installLogs, setInstallLogs] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,8 +119,8 @@ export default function InstallationSection({ orderId, order, onRefresh, updateO
 
           <div className="mt-4">
             {!adding ? (
-              <Button size="sm" onClick={() => setAdding(true)} disabled={pendingInstall <= 0}>
-                Add Installation Entry
+              <Button size="sm" onClick={() => setAdding(true)} disabled={readOnly || pendingInstall <= 0}>
+                {readOnly ? "View Only" : "Add Installation Entry"}
               </Button>
             ) : (
               <div className="rounded-md border p-4 bg-muted/30 space-y-3">
